@@ -23,6 +23,8 @@ struct UITransform {
 };
 
 // =============================================================
+// THIS NEEDS TO BE NULL TERMINATED!!! PLEASE DONT FORGET THIS
+// =============================================================
 class BaseUIElement {
 public:
     BaseUIElement(const UITransform* transform)

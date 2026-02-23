@@ -15,3 +15,7 @@
 // =============================================================
 // Fonts
 #include "WolfEngine/Graphics/UserInterface/Fonts/WE_Font.hpp"
+
+// =============================================================
+// Palettes
+#include "WolfEngine/Graphics/ColorPalettes/WE_Palettes.hpp"

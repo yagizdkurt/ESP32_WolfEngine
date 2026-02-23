@@ -1,9 +1,10 @@
 #include "WE_UIManager.hpp"
 #include <string.h>
 
-void UIManager::setElements(BaseUIElement** elements, uint8_t count) {
+void UIManager::setElements(BaseUIElement** elements) {
     m_elements = elements;
-    m_count    = count;
+    m_count    = 0;
+    while (elements[m_count] != nullptr) m_count++;
 
     for (uint8_t i = 0; i < m_count; i++) {
         if (m_elements[i]) m_elements[i]->m_manager = this;

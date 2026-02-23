@@ -48,12 +48,9 @@ public:
     float getAxis(JoyAxis axis) const;
 
 private:
-    // ── Constants ─────────────────────────────────────────────
-
     static constexpr int BUTTON_COUNT = 7;
 
-    // GPIO pin for each button index, sourced from settings.
-    // -1 means the button is not on a direct GPIO pin.
+    // GPIO pin for each button index, sourced from settings. -1 means the button is not on a direct GPIO pin.
     static constexpr int GPIO_PINS[BUTTON_COUNT] = {
         INPUT_PIN_BUTTON_A,
         INPUT_PIN_BUTTON_B,
@@ -64,8 +61,7 @@ private:
         INPUT_PIN_BUTTON_K,
     };
 
-    // PCF8574 pin for each button index, sourced from settings.
-    // -1 means the button is not on the expander.
+    // PCF8574 pin for each button index, sourced from settings. -1 means the button is not on the expander.
     static constexpr int EXP_PINS[BUTTON_COUNT] = {
         INPUT_PCF8574_PIN_BUTTON_A,
         INPUT_PCF8574_PIN_BUTTON_B,
@@ -96,20 +92,9 @@ private:
     float m_axisY = 0.0f;
 
 #if INPUT_PCF8574_ADDR != -1
-    // PCF8574 instance used for expander-routed buttons.
-    // Constructed with the address from WE_InputSettings.hpp.
     PCF8574 m_expander { INPUT_PCF8574_ADDR };
 #endif
 
-    // ── Internal helpers ───────────────────────────────────────
-
-    // Configures GPIO pins and ADC channels declared in WE_InputSettings.hpp.
-    // Skips any pin set to -1. Called once from the constructor.
-    void init();
-
-    // Polls all button sources (GPIO + expander), runs debouncing,
-    // and updates the joystick axes. Called every frame by WolfEngine.
-    void tick();
 
     // Reads the physical level of a single button from whichever source
     // it is wired to (GPIO or PCF8574). Returns the logical pressed state
@@ -123,9 +108,8 @@ private:
     // asymmetric ADC ranges around centre are handled correctly.
     float normalizeAxis(int raw, int centre, int minVal, int maxVal) const;
 
-    // WolfEngine drives init() and tick() — nothing else should.
     friend class WolfEngine;
-
-    // Constructor is private; use getInstance() / Input().
     InputManager() { init(); }
+    void init();
+    void tick();
 };

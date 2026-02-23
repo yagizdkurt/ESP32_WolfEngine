@@ -15,6 +15,7 @@
 #include "WolfEngine/Graphics/RenderSystem/WE_RenderCore.hpp"
 #include "WolfEngine/Graphics/RenderSystem/WE_Camera.hpp"
 #include "WolfEngine/Graphics/UserInterface/WE_UIManager.hpp"
+#include "WolfEngine/Graphics/ColorPalettes/WE_Palettes.hpp"
 
 // ======= SOUND SYSTEM ========
 #include "WolfEngine/Sound/WE_SoundCore.hpp"

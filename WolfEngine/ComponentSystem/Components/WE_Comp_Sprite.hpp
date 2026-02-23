@@ -117,6 +117,9 @@ public:
     // Change the current snap rotation.
     void setRotation(Rotation rotation)      { m_rotation = rotation;  }
 
+    // Change the sprite pointer. Useful for animation or morphing effects.
+    void setPixels(const uint8_t* pixels)    { m_pixels = pixels; }
+
     // Show or hide without removing from the render layer.
     // Hidden sprites are skipped by the renderer each frame.
     void setVisible(bool visible)            { m_visible  = visible;   }

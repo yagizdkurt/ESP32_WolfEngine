@@ -14,19 +14,21 @@
 //  static const UITransform scoreTf = { 52, 12, true };
 //
 //  // RAM
-//  static UILabelState scoreState = { "Score: 0", 1 };
+//  static UILabelState scoreState = { "Score: 0" };
 //
 //  // Element
-//  static UILabel scoreLabel(&scoreTf, &scoreState, PALETTE_GRAYSCALE);
-//  static BaseUIElement* uiElements[] = { &scoreLabel };
+//  static UILabel scoreLabel(&scoreTf, &scoreState);
 //
-//  // Before Engine.Run():
-//  engine.ui.setElements(uiElements, 1);
+//  // Array MUST be null-terminated — always end with nullptr
+//  static BaseUIElement* uiElements[] = { &scoreLabel, nullptr };
+//
+//  // Before StartGame():
+//  engine.ui.setElements(uiElements);
 // =============================================================
 
 class UIManager final {
 public:
-    void setElements(BaseUIElement** elements, uint8_t count);
+    void setElements(BaseUIElement** elements); // THIS MUST BE NULL TERMINATED!!! PLEASE DONT FORGET THIS
     void markAllDirty();
     bool isDirty() const { return m_dirty; }
 private:
