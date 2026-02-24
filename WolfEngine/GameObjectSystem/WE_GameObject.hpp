@@ -156,7 +156,6 @@ public:
         static_assert(std::is_base_of<GameObject, T>::value, "T must be a GameObject");
         T* obj = new T();
         obj->CreateObject();
-        obj->Start();
         return obj;
     }
 
@@ -168,7 +167,10 @@ protected:
     GameObject();
     virtual ~GameObject();
 private:
-    uint8_t  id;
-    bool     isValid;
+    uint8_t  id = -1;
+    bool     isValid = false;
+    bool     hasStarted = false;
     bool CreateObject();
+    void callStart();
+    friend class WolfEngine;
 };

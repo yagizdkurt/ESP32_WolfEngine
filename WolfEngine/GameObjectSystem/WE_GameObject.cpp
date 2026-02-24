@@ -25,3 +25,11 @@ void GameObject::DestroyGameObject(GameObject *gameObject) {
     }
     delete gameObject;
 }
+
+
+void GameObject::callStart() {
+    if (!hasStarted) {
+        Start();
+        hasStarted = true;
+    }
+}

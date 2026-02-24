@@ -5,14 +5,20 @@ void WolfEngine::StartEngine() {
     renderer.initialize();
     m_Camera.initialize(RENDER_SCREEN_WIDTH, RENDER_UI_START_ROW);
     m_UIManager.initialize(renderer.m_framebuffer, RENDER_SCREEN_WIDTH, RENDER_SCREEN_HEIGHT);
+    m_SoundManager.Initialize();
+    
 }
 
 void WolfEngine::StartGame() {
+    m_isRunning = true;
     int64_t lastFrameTime = esp_timer_get_time();
+    for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj) obj->callStart();
 
     while (true) {
         int64_t now     = esp_timer_get_time();
         int64_t elapsed = now - lastFrameTime;
+
+        m_SoundManager.update();
 
         // Only tick if enough time has passed for a 30fps frame
         if (elapsed >= TARGET_FRAME_TIME_US) {

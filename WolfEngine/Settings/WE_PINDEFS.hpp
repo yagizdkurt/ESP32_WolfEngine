@@ -1,9 +1,8 @@
 #pragma once
-/* 
-========================
- DEVICE PIN CONFIGURATIONS 
-========================
-*/
+
+//==========================
+// DEVICE PIN CONFIGURATIONS
+//==========================
 
 // Render spesific
 #define RENDER_PIN_CHIPSELECT 17
@@ -21,3 +20,7 @@
 // I2C bus pins
 #define I2C_PIN_SDA 21
 #define I2C_PIN_SCL 22
+
+// Sound pins
+#define MUSIC_PIN 14
+#define SFX_PIN 32
