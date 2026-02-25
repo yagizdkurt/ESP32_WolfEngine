@@ -6,7 +6,8 @@ void WolfEngine::StartEngine() {
     m_Camera.initialize(RENDER_SCREEN_WIDTH, RENDER_UI_START_ROW);
     m_UIManager.initialize(renderer.m_framebuffer, RENDER_SCREEN_WIDTH, RENDER_SCREEN_HEIGHT);
     m_SoundManager.Initialize();
-    
+    BaseUIElement **defaultUI = new BaseUIElement*[1] { nullptr };
+    UI().setElements(defaultUI);
 }
 
 void WolfEngine::StartGame() {

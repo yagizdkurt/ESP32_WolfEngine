@@ -2,54 +2,49 @@
 #include <stdint.h>
 #include "WolfEngine/Settings/WE_Settings.hpp"
 #include "WolfEngine/Graphics/ColorPalettes/WE_Palette_Grayscale.hpp"
+class UIManager;
 
-// =============================================================
-//  WE_BaseUIElement
-//  Abstract base class for all UI elements.
-//  UITransform is stored in flash (const) — position never changes.
-//  visible, dirty, color index, and palette pointer live in RAM.
-//
-//  Never instantiate directly — use UILabel, UIBar, etc.
-// =============================================================
-
-class UIManager;  // forward declaration
 
 // --- Stored in flash (const) ---
-struct UITransform {
-    int16_t x;       // screen x position
-    int16_t y;       // screen y position (see anchor)
-    bool    anchor;  // if true, y is relative to RENDER_UI_START_ROW
-                     // e.g. anchor=true, y=12 → draws at y=140 (128+12)
-};
+// { X,Y,Anchor }
+// If anchor=true, Y is treated as an offset from the bottom of the screen.
+struct UITransform { int16_t x; int16_t y; bool anchor; };
 
 // =============================================================
 // THIS NEEDS TO BE NULL TERMINATED!!! PLEASE DONT FORGET THIS
 // =============================================================
+//  WE_BaseUIElement
+//  Abstract base class for all UI elements.
+//  UITransform is stored in flash (const) - position never changes.
+//  visible, dirty, color index, and palette pointer live in RAM.
+//
+//  Never instantiate directly - use UILabel, UIBar, etc.
+// =============================================================
 class BaseUIElement {
 public:
-    BaseUIElement(const UITransform* transform)
-        : m_transform(transform)
-        , m_manager(nullptr)
-        , m_visible(true)
-        , m_dirty(false) {}
+    // Bind this element to a fixed transform.
+    BaseUIElement(const UITransform* transform);
 
     virtual ~BaseUIElement() = default;
-    virtual void draw(class UIManager& mgr) = 0;  // pure virtual — must implement
+    // Render this element when dirty and visible.
+    virtual void draw(class UIManager& mgr) = 0;  // pure virtual - must implement
 
-    void show()  { m_visible = true;  markDirty(); }
-    void hide()  { m_visible = false; markDirty(); }
+    // Make the element visible and mark UI dirty.
+    void show();
+    // Hide the element and mark UI dirty.
+    void hide();
 
-    bool isVisible() const { return m_visible; }
-    bool isDirty()   const { return m_dirty;   }
-    void clearDirty()      { m_dirty = false;  }
+    // Return current visibility state.
+    bool isVisible() const;
+    // Return whether this element needs redraw.
+    bool isDirty() const;
+    // Clear dirty flag after rendering.
+    void clearDirty();
 
-    // Resolves y coordinate — applies anchor offset if set
-    int16_t getX() const { return m_transform->x; }
-    int16_t getY() const {
-        return m_transform->anchor
-            ? m_transform->y + RENDER_UI_START_ROW
-            : m_transform->y;
-    }
+    // Get absolute X coordinate.
+    int16_t getX() const;
+    // Get absolute Y coordinate (applies anchor offset when enabled).
+    int16_t getY() const;
 
 protected:
     const UITransform* m_transform;

@@ -10,6 +10,7 @@
 // Elements
 #include "WE_BaseUIElement.hpp"
 #include "WE_UILabel.hpp"
+#include "WE_UIShape.hpp"
 
 
 // =============================================================

@@ -1,6 +1,5 @@
 #pragma once
 #include <stdint.h>
-#include <string.h>
 #include "WE_BaseUIElement.hpp"
 
 // =============================================================
@@ -10,14 +9,14 @@
 //
 //  USAGE:
 //
-//  // Flash — never changes
-//  static const UITransform scoreTf = { 52, 12, true };  // anchor=true → y=128+12=140
+//  // Flash - never changes
+//  constexpr UITransform transform = { 52, 12, true };  // anchor=true -> y=128+12=140
 //
-//  // RAM — changes at runtime
-//  static UILabelState scoreState = { "Score: 0", 1 };   // text, color index
+//  // RAM - changes at runtime
+//  UILabelState state = { "Score: 0", 1 };   // text, color index
 //
 //  // Element
-//  static UILabel scoreLabel(&scoreTf, &scoreState, PALETTE_GRAYSCALE);
+//  UILabel scoreLabel(&transform, &state, PALETTE_GRAYSCALE);
 //
 //  // Update at runtime
 //  scoreLabel.setText("Score: 42");
@@ -36,23 +35,21 @@ struct UILabelState {
 // =============================================================
 class UILabel : public BaseUIElement {
 public:
-    UILabel(const UITransform* transform, UILabelState* state) : BaseUIElement(transform) , m_state(state) {}
+    // Create a label bound to transform and mutable state.
+    UILabel(const UITransform* transform, UILabelState* state);
 
+    // Draw label text using current state values.
     void draw(UIManager& mgr) override;
 
-    void setText(const char* text) {
-        strncpy(m_state->text, text, WE_UI_LABEL_MAX_LEN - 1);
-        m_state->text[WE_UI_LABEL_MAX_LEN - 1] = '\0';
-        markDirty();
-    }
+    // Update label text (clamped to max length) and mark dirty.
+    void setText(const char* text);
+    // Update palette color index and mark dirty.
+    void setColorIndex(uint8_t index);
 
-    void setColorIndex(uint8_t index) {
-        m_state->colorIndex = index;
-        markDirty();
-    }
-
-    const char* getText()       const { return m_state->text;       }
-    uint8_t     getColorIndex() const { return m_state->colorIndex; }
+    // Read current label text.
+    const char* getText() const;
+    // Read current palette color index.
+    uint8_t getColorIndex() const;
 
 private:
     UILabelState* m_state;
