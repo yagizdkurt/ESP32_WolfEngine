@@ -42,23 +42,33 @@ Full documentation is available on the [Wiki](https://github.com/yagizdkurt/Wolf
 
 ---
 
-## 🗂️ Project Structure
+## 🗺️ Roadmap
 
-```
-src/
-├── main.cpp
-└── WolfEngine/
-    ├── WolfEngine.hpp
-    ├── Core/
-    ├── ComponentSystem/
-    ├── GameObjectSystem/
-    ├── Graphics/
-    │   ├── ColorPalettes/
-    │   ├── RenderSystem/
-    │   └── UserInterface/
-    ├── Settings/
-    └── Sound/
-```
+- [ ] Multiplayer support  
+  - Multiple PCF expanders for multiple controllers
+  - Screen splitting features
+  - Up to 4 controller support
+
+- [ ] Direct access to frabuffer with special features
+  - We agree that user should access to framebuffer itself and be able to draw anything that he/she likes. Yet with our current design pattern we do not want to expose renderer object directly. Thus we will be working on a way to expose framebuffer which will be an advanced feature and still suggest people to use gameobjects and sprite renderer component to make games by default.
+
+- [ ] More UI Elements
+  - More UI elements like textbox, circle panel, scrolls.
+  - Menu UI support like selectable buttons.
+  - UI edge helper for better looking game/UI screen split.
+
+- [ ] Save/Load manager
+  - Saving and loading support with EEPROM.
+
+- [ ] Colliders and detection
+  - Collision detection with OnCollide() checkers.
+  - Collider element that stops objects from passing each other.
+
+- [ ] Hardware settings
+  - Most common ESP-32 boards have around 5kb ram and 4mb flash. Which is the "default of engine". This is why we mostly used palettes, static sprites etc. Yet some boards have larger ram and you may want to develop using dynamic variables. Thus we want to add a compiler spesified setting like RAM_LOW RAM_HIGH definition to make dynamic sprites etc possible.
+
+- [ ] More screen drivers
+  - At the moment the engine only have 1 default driver with support to user coded drivers. We want to expand the drivers. Which is easy to code but I only have one physical screen at hand so yea...
 
 ---
 
