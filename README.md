@@ -18,6 +18,7 @@ Built with PlatformIO and ESP-IDF. No Unity. No Godot. Just you, your ESP32, and
 - 🔄 **Sprite rotation** — four snap rotations (0°, 90°, 180°, 270°) applied per-pixel at draw time with zero matrix math overhead.
 - 🎨 **Palette system** — 5 built-in palettes (Grayscale, Warm, Cool, GameBoy, Sunset), each with 31 usable colors. Swap palettes at runtime for damage flash, color variants, day/night effects — it's just a pointer swap. Custom palettes are a single `constexpr` array away.
 - 🕹️ **Input** — buttons via direct GPIO or PCF8574 I2C expander, analog joystick with calibration and dead zone. Software debouncing built in. `getButton()`, `getButtonDown()`, `getButtonUp()` — works like you'd expect.
+- 🔊 **Sound** — supports 2 seperate buzzers for music and sfx. Has note system built in. Using PWM to generate 8bit style musics and sfx. Looping and callbacks included!
 - 📷 **Camera** — smooth follow targeting, configurable follow speed, zoom, and world↔screen coordinate conversion. Sprites outside the visible area are culled before drawing.
 - 🖥️ **UI system** — text labels anchored to a dedicated UI region at the bottom of the screen. Dirty-flag system means the UI region is only redrawn and flushed when something actually changes.
 - ⚡ **Partial screen flush** — when the UI hasn't changed, only the game region is sent over SPI. Less data, faster frames.
