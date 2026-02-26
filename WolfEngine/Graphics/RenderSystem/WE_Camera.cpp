@@ -1,11 +1,9 @@
 #include "WE_Camera.hpp"
 #include "WolfEngine/GameObjectSystem/WE_GameObject.hpp"
 
-void Camera::initialize(int screen_w, int screen_h) {
+void Camera::initialize() {
     m_position    = Vec2::zero();
     m_zoom        = 1.0f;
-    m_screenW     = screen_w;
-    m_screenH     = screen_h;
     m_target      = nullptr;
     m_followSpeed = 0.1f;
 }
@@ -62,27 +60,23 @@ void Camera::followTick() {
 // ------------------------------------------------------------------ //
 
 Vec2 Camera::worldToScreen(Vec2 world_pos) const {
-    float half_w = m_screenW * 0.5f;
-    float half_h = m_screenH * 0.5f;
     return {
-        (world_pos.x - m_position.x) * m_zoom + half_w,
-        (world_pos.y - m_position.y) * m_zoom + half_h
+        (world_pos.x - m_position.x) * m_zoom + RENDER_SETTINGS.gameRegion.centerX(),
+        (world_pos.y - m_position.y) * m_zoom + RENDER_SETTINGS.gameRegion.centerY()
     };
 }
 
 Vec2 Camera::screenToWorld(Vec2 screen_pos) const {
-    float half_w = m_screenW * 0.5f;
-    float half_h = m_screenH * 0.5f;
     return {
-        (screen_pos.x - half_w) / m_zoom + m_position.x,
-        (screen_pos.y - half_h) / m_zoom + m_position.y
+        (screen_pos.x - RENDER_SETTINGS.gameRegion.centerX()) / m_zoom + m_position.x,
+        (screen_pos.y - RENDER_SETTINGS.gameRegion.centerY()) / m_zoom + m_position.y
     };
 }
 
 bool Camera::isVisible(Vec2 world_pos, float margin) const {
     Vec2 screen = worldToScreen(world_pos);
-    return screen.x >= -margin && screen.x <= m_screenW + margin &&
-           screen.y >= -margin && screen.y <= m_screenH + margin;
+    return screen.x >= RENDER_SETTINGS.gameRegion.x1 - margin && screen.x <= RENDER_SETTINGS.gameRegion.x2 + margin &&
+           screen.y >= RENDER_SETTINGS.gameRegion.y1 - margin && screen.y <= RENDER_SETTINGS.gameRegion.y2 + margin;
 }
 
 // ------------------------------------------------------------------ //

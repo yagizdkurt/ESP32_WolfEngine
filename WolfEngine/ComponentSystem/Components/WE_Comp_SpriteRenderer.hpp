@@ -16,7 +16,7 @@ class Renderer;
 //
 //  USAGE:
 //      // 1. Define pixel data in flash
-//      constexpr uint8_t playerPixels[8 * 8] = { ... };
+//      constexpr uint8_t playerPixels[7 * 7] = { ... };
 //
 //      // 2. Create Sprite asset — size is automatically deduced and validated
 //      constexpr Sprite SPRITE_PLAYER = Sprite::Create(playerPixels);

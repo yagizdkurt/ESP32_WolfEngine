@@ -35,7 +35,7 @@ int16_t BaseUIElement::getX() const {
 
 int16_t BaseUIElement::getY() const {
     return m_transform->anchor
-        ? m_transform->y + RENDER_UI_START_ROW
+        ? m_transform->y + RENDER_SETTINGS.gameRegion.y2
         : m_transform->y;
 }
 

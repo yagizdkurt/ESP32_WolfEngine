@@ -1,5 +1,7 @@
 #include "WolfEngine/Core/WE_InputManager.hpp"
 #include "esp_timer.h"
+#include "driver/gpio.h"
+#include "esp_adc/adc_oneshot.h"
 
 // ─────────────────────────────────────────────────────────────
 //  init
@@ -8,51 +10,56 @@
 void InputManager::init() {
 
     uint64_t pinMask = 0;
-    for (int i = 0; i < BUTTON_COUNT; i++) {
-        if (GPIO_PINS[i] != -1)
-            pinMask |= (1ULL << GPIO_PINS[i]);
+    for (int i = 0; i < InputSettings::BUTTON_COUNT; i++) {
+        if (INPUT_SETTINGS.gpioPins[i] != -1)
+            pinMask |= (1ULL << INPUT_SETTINGS.gpioPins[i]);
     }
 
     if (pinMask != 0) {
-        gpio_config_t cfg   = {};
-        cfg.mode            = GPIO_MODE_INPUT;
-        cfg.pull_up_en      = INPUT_BUTTON_ACTIVE_LOW ? GPIO_PULLUP_ENABLE  : GPIO_PULLUP_DISABLE;
-        cfg.pull_down_en    = INPUT_BUTTON_ACTIVE_LOW ? GPIO_PULLDOWN_DISABLE : GPIO_PULLDOWN_ENABLE;
-        cfg.intr_type       = GPIO_INTR_DISABLE;
-        cfg.pin_bit_mask    = pinMask;
+        gpio_config_t cfg = {};
+        cfg.mode          = GPIO_MODE_INPUT;
+        cfg.pull_up_en    = INPUT_SETTINGS.activeLow ? GPIO_PULLUP_ENABLE   : GPIO_PULLUP_DISABLE;
+        cfg.pull_down_en  = INPUT_SETTINGS.activeLow ? GPIO_PULLDOWN_DISABLE : GPIO_PULLDOWN_ENABLE;
+        cfg.intr_type     = GPIO_INTR_DISABLE;
+        cfg.pin_bit_mask  = pinMask;
         gpio_config(&cfg);
     }
 
-#if INPUT_PCF8574_ADDR != -1
-    m_expander.write(0xFF);
-#endif
+    if constexpr (INPUT_SETTINGS.pcf8574Addr != -1) {
+        m_expander = PCF8574(INPUT_SETTINGS.pcf8574Addr);
+        m_expander.write(0xFF);
+    }
 
-#if defined(INPUT_JOY_X_ADC_CH) || defined(INPUT_JOY_Y_ADC_CH)
-    adc1_config_width(ADC_WIDTH_BIT_12);
+    if (INPUT_SETTINGS.joyXEnabled || INPUT_SETTINGS.joyYEnabled) {
+        adc_oneshot_unit_init_cfg_t unitCfg = {};
+        unitCfg.unit_id = ADC_UNIT_1;
+        adc_oneshot_new_unit(&unitCfg, &m_adcHandle);
 
-    #if defined(INPUT_JOY_X_ADC_CH)
-        adc1_config_channel_atten(INPUT_JOY_X_ADC_CH, ADC_ATTEN_DB_11);
-    #endif
+        adc_oneshot_chan_cfg_t chanCfg = {};
+        chanCfg.bitwidth = ADC_BITWIDTH_12;
+        chanCfg.atten    = ADC_ATTEN_DB_12;
 
-    #if defined(INPUT_JOY_Y_ADC_CH)
-        adc1_config_channel_atten(INPUT_JOY_Y_ADC_CH, ADC_ATTEN_DB_11);
-    #endif
-#endif
+        if (INPUT_SETTINGS.joyXEnabled)
+            adc_oneshot_config_channel(m_adcHandle, INPUT_SETTINGS.joyXChannel, &chanCfg);
+
+        if (INPUT_SETTINGS.joyYEnabled)
+            adc_oneshot_config_channel(m_adcHandle, INPUT_SETTINGS.joyYChannel, &chanCfg);
+    }
 
     int64_t now = esp_timer_get_time();
-    for (int i = 0; i < BUTTON_COUNT; i++)
+    for (int i = 0; i < InputSettings::BUTTON_COUNT; i++)
         m_debounceTimestamp[i] = now;
 }
 
 // ─────────────────────────────────────────────────────────────
-//  tick  (called every frame by WolfEngine)
+//  tick
 // ─────────────────────────────────────────────────────────────
 
 void InputManager::tick() {
     int64_t now = esp_timer_get_time();
-    const int64_t debounceUs = static_cast<int64_t>(INPUT_DEBOUNCE_MS) * 1000LL;
+    const int64_t debounceUs = static_cast<int64_t>(INPUT_SETTINGS.debounceMs) * 1000LL;
 
-    for (int i = 0; i < BUTTON_COUNT; i++) {
+    for (int i = 0; i < InputSettings::BUTTON_COUNT; i++) {
         bool raw = readRaw(static_cast<Button>(i));
 
         if (raw != m_rawState[i]) {
@@ -64,55 +71,39 @@ void InputManager::tick() {
         }
     }
 
-#if defined(INPUT_JOY_X_ADC_CH)
-    m_axisX = normalizeAxis(
-        adc1_get_raw(INPUT_JOY_X_ADC_CH),
-        INPUT_JOY_X_CENTER,
-        INPUT_JOY_X_MIN,
-        INPUT_JOY_X_MAX
-    );
-#endif
+    if (INPUT_SETTINGS.joyXEnabled) {
+        int raw = 0;
+        adc_oneshot_read(m_adcHandle, INPUT_SETTINGS.joyXChannel, &raw);
+        m_axisX = normalizeAxis(raw, INPUT_SETTINGS.joyXCenter, INPUT_SETTINGS.joyXMin, INPUT_SETTINGS.joyXMax);
+    }
 
-#if defined(INPUT_JOY_Y_ADC_CH)
-    m_axisY = normalizeAxis(
-        adc1_get_raw(INPUT_JOY_Y_ADC_CH),
-        INPUT_JOY_Y_CENTER,
-        INPUT_JOY_Y_MIN,
-        INPUT_JOY_Y_MAX
-    );
-#endif
+    if (INPUT_SETTINGS.joyYEnabled) {
+        int raw = 0;
+        adc_oneshot_read(m_adcHandle, INPUT_SETTINGS.joyYChannel, &raw);
+        m_axisY = normalizeAxis(raw, INPUT_SETTINGS.joyYCenter, INPUT_SETTINGS.joyYMin, INPUT_SETTINGS.joyYMax);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────
-//  readRaw — read the physical level of one button
+//  readRaw
 // ─────────────────────────────────────────────────────────────
 
 bool InputManager::readRaw(Button btn) const {
     int idx = static_cast<int>(btn);
 
-    // GPIO takes priority over the expander when both are configured.
-    if (GPIO_PINS[idx] != -1) {
-        int level = gpio_get_level(static_cast<gpio_num_t>(GPIO_PINS[idx]));
-#if INPUT_BUTTON_ACTIVE_LOW
-        return level == 0;   // Pressed = pin pulled to GND
-#else
-        return level == 1;   // Pressed = pin driven HIGH
-#endif
+    if (INPUT_SETTINGS.gpioPins[idx] != -1) {
+        int level = gpio_get_level(static_cast<gpio_num_t>(INPUT_SETTINGS.gpioPins[idx]));
+        return INPUT_SETTINGS.activeLow ? level == 0 : level == 1;
     }
 
-#if INPUT_PCF8574_ADDR != -1
-    if (EXP_PINS[idx] != -1) {
-        int level = m_expander.pinRead(static_cast<uint8_t>(EXP_PINS[idx]));
-        if (level < 0) return false;  // I2C read failed — treat as not pressed
-#if INPUT_BUTTON_ACTIVE_LOW
-        return level == 0;
-#else
-        return level == 1;
-#endif
+    if constexpr (INPUT_SETTINGS.pcf8574Addr != -1) {
+        if (INPUT_SETTINGS.expanderPins[idx] != -1) {
+            int level = m_expander.pinRead(static_cast<uint8_t>(INPUT_SETTINGS.expanderPins[idx]));
+            if (level < 0) return false;
+            return INPUT_SETTINGS.activeLow ? level == 0 : level == 1;
+        }
     }
-#endif
 
-    // No source configured for this button.
     return false;
 }
 
@@ -124,20 +115,16 @@ float InputManager::normalizeAxis(int raw, int centre, int minVal, int maxVal) c
     float normalized;
 
     if (raw >= centre) {
-        // Upper half: map [centre, maxVal] → [0.0, 1.0]
         int range = maxVal - centre;
         normalized = (range > 0) ? static_cast<float>(raw - centre) / range : 0.0f;
     } else {
-        // Lower half: map [minVal, centre] → [-1.0, 0.0]
         int range = centre - minVal;
         normalized = (range > 0) ? static_cast<float>(raw - centre) / range : 0.0f;
     }
 
-    // Dead zone — clamp small values to exactly 0 to prevent stick drift.
-    if (normalized > -INPUT_JOY_DEADZONE && normalized < INPUT_JOY_DEADZONE)
+    if (normalized > -INPUT_SETTINGS.joyDeadzone && normalized < INPUT_SETTINGS.joyDeadzone)
         return 0.0f;
 
-    // Clamp to [-1, 1] in case ADC slightly exceeds calibration range.
     if (normalized >  1.0f) return  1.0f;
     if (normalized < -1.0f) return -1.0f;
 
@@ -165,3 +152,4 @@ bool InputManager::getButtonUp(Button btn) const {
 float InputManager::getAxis(JoyAxis axis) const {
     return (axis == JoyAxis::X) ? m_axisX : m_axisY;
 }
+

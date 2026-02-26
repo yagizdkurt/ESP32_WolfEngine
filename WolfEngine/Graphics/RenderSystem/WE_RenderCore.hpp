@@ -47,9 +47,8 @@
 
 
 class Renderer {
-
 private:
-    Renderer(DisplayDriver* driver);
+    Renderer(DisplayDriver* driver) : m_driver(driver) { }
 
     void initialize();
     void render();
@@ -60,7 +59,7 @@ private:
 
     DisplayDriver* m_driver;
     uint16_t       m_framebuffer[RENDER_SCREEN_WIDTH * RENDER_SCREEN_HEIGHT];
-    SpriteRenderer* m_layers[RENDER_POOL_LAYERS][MAX_GAME_OBJECTS];
+    SpriteRenderer* m_layers[RENDER_POOL_LAYERS][MAX_GAME_OBJECTS] = { };
 
     friend class WolfEngine;
     friend class SpriteRenderer;

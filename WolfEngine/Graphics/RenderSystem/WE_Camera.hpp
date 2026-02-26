@@ -1,5 +1,6 @@
 #pragma once
 #include "WolfEngine/Utilities/WE_Vector2d.hpp"
+#include "WolfEngine/Settings/WE_Settings.hpp"
 
 class GameObject;
 class Camera {
@@ -34,12 +35,10 @@ private:
     Camera(){}
     Vec2        m_position;
     float       m_zoom        = 1.0f;
-    int         m_screenW     = 0;
-    int         m_screenH     = 0;
     float       m_followSpeed = 0.1f;
     GameObject* m_target      = nullptr;
 
-    void initialize(int screen_w, int screen_h);
+    void initialize();
 
     friend class WolfEngine;
 };
