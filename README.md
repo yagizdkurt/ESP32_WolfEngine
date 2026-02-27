@@ -17,7 +17,8 @@ Built with PlatformIO and ESP-IDF. No Unity. No Godot. Just you, your ESP32, and
 - 🖼️ **Sprite rendering** — palette-indexed pixel art with a full layer-based draw order. Sprites register and unregister with the renderer automatically.
 - 🔄 **Sprite rotation** — four snap rotations (0°, 90°, 180°, 270°) applied per-pixel at draw time with zero matrix math overhead.
 - 🎨 **Palette system** — 5 built-in palettes (Grayscale, Warm, Cool, GameBoy, Sunset), each with 31 usable colors. Swap palettes at runtime for damage flash, color variants, day/night effects — it's just a pointer swap. Custom palettes are a single `constexpr` array away.
-- 🕹️ **Input** — buttons via direct GPIO or PCF8574 I2C expander, analog joystick with calibration and dead zone. Software debouncing built in. `getButton()`, `getButtonDown()`, `getButtonUp()` — works like you'd expect.
+- 🕹️ **Input** — buttons via direct GPIO or I2C expanders, analog joystick with calibration and dead zone. Software debouncing built in.
+- 🕹️ **Controllers and Multiplayer** — Per controller setup for up to 4 controllers! Welcome to multiplayer zone!
 - 🔊 **Sound** — supports 2 seperate buzzers for music and sfx. Has note system built in. Using PWM to generate 8bit style musics and sfx. Looping and callbacks included!
 - 📷 **Camera** — smooth follow targeting, configurable follow speed, zoom, and world↔screen coordinate conversion. Sprites outside the visible area are culled before drawing.
 - 🖥️ **UI system** — text labels anchored to a dedicated UI region at the bottom of the screen. Dirty-flag system means the UI region is only redrawn and flushed when something actually changes.
@@ -44,10 +45,10 @@ Full documentation is available on the [Wiki](https://github.com/yagizdkurt/Wolf
 
 ## 🗺️ Roadmap
 
-- [ ] Multiplayer support  
-  - Multiple PCF expanders for multiple controllers
-  - Screen splitting features
-  - Up to 4 controller support
+- [x] Multiplayer support  
+  - Multiple IO expanders for multiple controllers
+  - 4 controller support
+  - More IO Drivers!
 
 - [ ] Direct access to frabuffer with special features
   - We agree that user should access to framebuffer itself and be able to draw anything that he/she likes. Yet with our current design pattern we do not want to expose renderer object directly. Thus we will be working on a way to expose framebuffer which will be an advanced feature and still suggest people to use gameobjects and sprite renderer component to make games by default.
