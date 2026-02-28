@@ -12,13 +12,11 @@ Built with PlatformIO and ESP-IDF. No Unity. No Godot. Just you, your ESP32, and
 
 ## ✨ What It Can Do
 
-- 🎮 **GameObject system** — component-based GameObjects with a clean `Start()` / `Update()` lifecycle. Attach sprites, define behavior, and let the engine drive it all.
+- 🎮 **GameObject & Component system** — component-based GameObjects with a clean `Start()` / `Update()` lifecycle. Transform is built in, attach components to build your dreams.
 - 🧩 **Component system** — build GameObjects by attaching components. Transform is built in, Sprite snaps on with one line, and the system is designed to grow with your game.
-- 🖼️ **Sprite rendering** — palette-indexed pixel art with a full layer-based draw order. Sprites register and unregister with the renderer automatically.
-- 🔄 **Sprite rotation** — four snap rotations (0°, 90°, 180°, 270°) applied per-pixel at draw time with zero matrix math overhead.
-- 🎨 **Palette system** — 5 built-in palettes (Grayscale, Warm, Cool, GameBoy, Sunset), each with 31 usable colors. Swap palettes at runtime for damage flash, color variants, day/night effects — it's just a pointer swap. Custom palettes are a single `constexpr` array away.
-- 🕹️ **Input** — buttons via direct GPIO or I2C expanders, analog joystick with calibration and dead zone. Software debouncing built in.
-- 🕹️ **Controllers and Multiplayer** — Per controller setup for up to 4 controllers! Welcome to multiplayer zone!
+- 🖼️ **Sprite rendering** — palette-indexed pixel art with rotation, layer-based draw order, and automatic registration with the renderer. Four snap rotations (0°, 90°, 180°, 270°) applied per-pixel at draw time with zero matrix math overhead. Sprites outside the visible area are culled before drawing.
+- 🎨 **Palette system** — 5 built-in palettes (Grayscale, Warm, Cool, GameBoy, Sunset), each with 31 usable colors. Swap palettes at runtime for damage flash, color variants, day/night effects — it's just a pointer swap. Custom palettes are supported!
+- 🕹️ **Input & Multiplayer** — up to 4 simultaneous local controllers, each independently configured with its own buttons, joystick, and I2C expander. Buttons via direct GPIO or expanders (PCF8574, PCF8575, MCP23017), analog joystick with calibration and dead zone, software debouncing built in.
 - 🔊 **Sound** — supports 2 seperate buzzers for music and sfx. Has note system built in. Using PWM to generate 8bit style musics and sfx. Looping and callbacks included!
 - 📷 **Camera** — smooth follow targeting, configurable follow speed, zoom, and world↔screen coordinate conversion. Sprites outside the visible area are culled before drawing.
 - 🖥️ **UI system** — text labels anchored to a dedicated UI region at the bottom of the screen. Dirty-flag system means the UI region is only redrawn and flushed when something actually changes.
