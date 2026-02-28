@@ -1,4 +1,4 @@
-# 🐺 WolfEngine
+# WolfEngine
 
 > A lightweight 2D game engine for ESP32 — built for tiny screens, big ideas, and people who like soldering things at 2am.
 
