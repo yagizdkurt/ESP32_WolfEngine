@@ -46,11 +46,11 @@ constexpr InputSettings INPUT_SETTINGS = {
             .enabled     = true,
                            // A    B    C    D    E    F    G    H    I    J
             .gpioPins    = { -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1,  -1 },
-            .expander    = { ExpanderType::PCF8574, 0x20, {0,-1,-1,-1,-1,-1,-1,-1,-1,-1} },
+            .expander    = { ExpanderType::PCF8574, 0x20, {0,1,2,3,-1,-1,-1,-1,-1,-1} },
             .joyXEnabled = true,
             .joyYEnabled = true,
-            .joyXChannel = ADC_CHANNEL_0,
-            .joyYChannel = ADC_CHANNEL_1,
+            .joyXChannel = ADC_CHANNEL_6,
+            .joyYChannel = ADC_CHANNEL_7,
             .joyXMin = 0, .joyXMax = 4095, .joyXCenter = 2048,
             .joyYMin = 0, .joyYMax = 4095, .joyYCenter = 2048,
             .joyDeadzone = 0.1f,
@@ -134,8 +134,8 @@ constexpr RenderSettings RENDER_SETTINGS = {
     .defaultBackgroundPixel = 0x0000,
 
     // Rectangular area of the screen used for game rendering. { x1, y1, x2, y2 }
-    // x1, y1 — top-left corner (inclusive), x2, y2 — bottom-right corner (exclusive)
-    .gameRegion = { 0, 0, 128, 108 },
+    // x1, y1 — top-left corner (inclusive), x2, y2 — bottom-right corner (inclusive)
+    .gameRegion = { 0, 0, 128, 160 },
 
     // Set to false to disable sprite rendering to set framebuffer pixels directly.
     .spriteSystemEnabled = true,

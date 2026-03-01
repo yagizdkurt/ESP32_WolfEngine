@@ -45,13 +45,8 @@ void Renderer::unregisterSprite(SpriteRenderer* sprite, int layer) {
 //  Handles rotation index math, transparency, and per-pixel
 //  bounds checking to prevent out-of-bounds framebuffer writes.
 // -------------------------------------------------------------
-static void drawSprite(uint16_t*         framebuffer,
-                       const SpriteData& data,
-                       int               screenX,
-                       int               screenY)
-{
+void Renderer::drawSprite(const SpriteData& data, int screenX, int screenY) {
     const int size = data.size;
-
     for (int py = 0; py < size; py++) {
         for (int px = 0; px < size; px++) {
 
@@ -86,7 +81,9 @@ static void drawSprite(uint16_t*         framebuffer,
             if (drawY < RENDER_SETTINGS.gameRegion.y1 || drawY >= RENDER_SETTINGS.gameRegion.y2) continue;
 
             // Palette lookup and write to framebuffer
-            framebuffer[drawY * RENDER_SCREEN_WIDTH + drawX] = data.palette[paletteIndex];
+            uint16_t color = data.palette[paletteIndex];
+            if (m_driver->requiresByteSwap) color = (color >> 8) | (color << 8);
+            m_framebuffer[drawY * RENDER_SCREEN_WIDTH + drawX] = color;
         }
     }
 }
@@ -120,7 +117,7 @@ void Renderer::drawGame() {
             int drawX = (int)screenPos.x - (data.size / 2);
             int drawY = (int)screenPos.y - (data.size / 2);
 
-            drawSprite(m_framebuffer, data, drawX, drawY);
+            drawSprite(data, drawX, drawY);
         }
     }
 }
@@ -131,8 +128,11 @@ void Renderer::drawGame() {
 // -------------------------------------------------------------
 void Renderer::render() {
     
-    if constexpr (RENDER_SETTINGS.cleanFramebufferEachFrame) 
-        std::fill(m_framebuffer, m_framebuffer + m_driver->screenWidth * m_driver->screenHeight, RENDER_SETTINGS.defaultBackgroundPixel);
+    if constexpr (RENDER_SETTINGS.cleanFramebufferEachFrame) {
+    uint16_t bg = RENDER_SETTINGS.defaultBackgroundPixel;
+    if (m_driver->requiresByteSwap) bg = (bg >> 8) | (bg << 8);
+    std::fill(m_framebuffer, m_framebuffer + m_driver->screenWidth * m_driver->screenHeight, bg);
+    }
     
     if constexpr (RENDER_SETTINGS.spriteSystemEnabled) drawGame(); // 2. Draw game region
 

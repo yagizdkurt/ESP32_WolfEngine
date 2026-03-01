@@ -55,6 +55,7 @@ private:
     void initialize();
     void render();
     void drawGame();
+    void drawSprite(const SpriteData& data, int screenX, int screenY);
 
     void registerSprite  (SpriteRenderer* sprite, int layer);
     void unregisterSprite(SpriteRenderer* sprite, int layer);
