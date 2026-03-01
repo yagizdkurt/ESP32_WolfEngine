@@ -32,12 +32,15 @@ Full documentation is available on the [Wiki](https://github.com/yagizdkurt/Wolf
 
 | | |
 |---|---|
-| 🚀 [Getting Started](https://github.com/yagizdkurt/WolfEngine/wiki/Installation-and-Setup) | Install, wire up, and run your first project |
-| 🧱 [Game Objects](https://github.com/yagizdkurt/WolfEngine/wiki/Game-Objects) | Creating and managing game entities |
-| 🎨 [Palette System](https://github.com/yagizdkurt/WolfEngine/wiki/Palette-System) | How indexed color works |
-| 🖼️ [Sprites & Layers](https://github.com/yagizdkurt/WolfEngine/wiki/Sprites-and-Layers) | Getting graphics on screen |
-| 🖥️ [UI System](https://github.com/yagizdkurt/WolfEngine/wiki/UIManager) | Labels, dirty rendering, UI region |
-| ⚙️ [Settings](https://github.com/yagizdkurt/WolfEngine/wiki/General-Settings) | Configure pins, layers, frame rate |
+| ❓  **[How To Install](Installation-&-Setup)** | Only check if you never coded before... Which is unlikely... |
+| ⚙️ **[Fast Tutorial](First-GameObject)** | For people who just want to rush B |
+| ⏩ **[Engine Settings](Settings)** | Configure frame rate, background color, and UI region |
+| 📌 **[Pin Setup](Pin-Definitions)** | Set up your GPIO and SPI wiring |
+| 🛰️ **[About GameObjects](GameObject)** | Learn everything about GameObjects |
+| 🎮 **[Inputs!](Input)** | How to get inputs from the controllers? |
+| 🚗 **[Your First Game Object!](First-GameObject)** | Learn how to create and move objects |
+| 🎨 **[How To Set Up Graphics?](How-To-Setup-Graphics)** | Get graphics on screen |
+| 🔉  **[How to pew pew?](Audio)** | Make the buzzer go brr |
 
 ---
 
@@ -47,9 +50,6 @@ Full documentation is available on the [Wiki](https://github.com/yagizdkurt/Wolf
   - Multiple IO expanders for multiple controllers
   - 4 controller support
   - More IO Drivers!
-
-- [ ] Direct access to frabuffer with special features
-  - We agree that user should access to framebuffer itself and be able to draw anything that he/she likes. Yet with our current design pattern we do not want to expose renderer object directly. Thus we will be working on a way to expose framebuffer which will be an advanced feature and still suggest people to use gameobjects and sprite renderer component to make games by default.
 
 - [ ] More UI Elements
   - More UI elements like textbox, circle panel, scrolls.
