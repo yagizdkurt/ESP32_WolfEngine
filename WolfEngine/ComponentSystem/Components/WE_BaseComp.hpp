@@ -4,6 +4,7 @@ enum ComponentType {
     COMP_TRANSFORM,
     COMP_SPRITE,
     COMP_ANIMATOR,
+    COMP_COLLIDER,
     COMP_MAX_TYPE
 };
 

@@ -4,6 +4,7 @@
 #include "WolfEngine/Utilities/WE_Vector2d.hpp"
 #include "WolfEngine/ComponentSystem/Components/WE_Comp_Transform.hpp"
 #include "WolfEngine/ComponentSystem/Components/WE_BaseComp.hpp"
+class Collider;
 
 // =============================================================
 //                  GAMEOBJECT SYSTEM
@@ -159,6 +160,20 @@ public:
         obj->CreateObject();
         return obj;
     }
+
+
+    // ---------------------------------------------------------
+    //  Collision and Trigger Events (virtual)
+    //  Override these in your subclass to respond to collisions
+    //  and triggers. These are called by the engine when the
+    //  appropriate physics events occur. Do not call these manually.
+    // ---------------------------------------------------------
+    virtual void OnCollisionEnter (Collider* other)  { }
+    virtual void OnCollisionStay  (Collider* other)  { }
+    virtual void OnCollisionExit  (Collider* other)  { }
+    virtual void OnTriggerEnter   (Collider* other)  { }
+    virtual void OnTriggerStay    (Collider* other)  { }
+    virtual void OnTriggerExit    (Collider* other)  { }
 
 
     // ---------------------------------------------------------

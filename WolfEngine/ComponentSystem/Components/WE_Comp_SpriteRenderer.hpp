@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include "WolfEngine/Graphics/SpriteSystem/WE_Sprite.hpp"
 #include "WolfEngine/Graphics/SpriteSystem/WE_SpriteData.hpp"
-#include "WolfEngine/Settings/WE_RenderLayers.hpp"
+#include "WolfEngine/Settings/WE_Layers.hpp"
 #include "WE_BaseComp.hpp"
 class GameObject;
 class Renderer;

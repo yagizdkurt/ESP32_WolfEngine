@@ -29,7 +29,7 @@
 // =============== Engine Settings ================
 #include "WolfEngine/Settings/WE_Settings.hpp"
 #include "WolfEngine/Settings/WE_PINDEFS.hpp"
-#include "WolfEngine/Settings/WE_RenderLayers.hpp"
+#include "WolfEngine/Settings/WE_Layers.hpp"
 
 // =============== Sprite Component ================
 #include "WolfEngine/ComponentSystem/Components/WE_Comp_SpriteRenderer.hpp"
