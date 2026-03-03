@@ -50,6 +50,7 @@ private:
     float                 m_offsetX        = 0.0f;
     float                 m_offsetY        = 0.0f;
     ColliderManager*      m_manager        = nullptr;
+    int                   m_slot           = -1;
 
     union {
         struct { int width; int height; } box;
@@ -57,7 +58,6 @@ private:
     } m_bounds = { {1, 1} };
 
     friend class ColliderManager;
-    
     void OnCollisionEnter(Collider* other) { if (m_owner) m_owner->OnCollisionEnter(other); }
     void OnCollisionStay (Collider* other) { if (m_owner) m_owner->OnCollisionStay(other);  }
     void OnCollisionExit (Collider* other) { if (m_owner) m_owner->OnCollisionExit(other);  }

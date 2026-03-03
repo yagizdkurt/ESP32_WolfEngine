@@ -48,6 +48,9 @@ void WolfEngine::gameTick() {
     // Update logic of each object
     for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj && obj->isActive) obj->Update();
 
+    // Evaluate collider interactions after movement/logic updates.
+    m_ColliderManager.tick();
+
     // Update camera after game logic so follow targets are at their new position
     m_Camera.followTick();
 
