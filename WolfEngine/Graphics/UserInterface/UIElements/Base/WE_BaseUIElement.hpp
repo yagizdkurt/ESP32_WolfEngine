@@ -2,13 +2,10 @@
 #include <stdint.h>
 #include "WolfEngine/Settings/WE_Settings.hpp"
 #include "WolfEngine/Graphics/ColorPalettes/WE_Palette_Grayscale.hpp"
+#include "WolfEngine/Graphics/RenderSystem/WE_RenderCore.hpp"
+#include "WE_UITransform.hpp"
 class UIManager;
 
-
-// --- Stored in flash (const) ---
-// { X,Y,Anchor }
-// If anchor=true, Y is treated as an offset from the bottom of the screen.
-struct UITransform { int16_t x; int16_t y; bool anchor; };
 
 // =============================================================
 // THIS NEEDS TO BE NULL TERMINATED!!! PLEASE DONT FORGET THIS
@@ -45,17 +42,19 @@ public:
 protected:
     friend class UIManager;
     friend class UIPanel;
+
+    uint16_t* fb = nullptr;
     const UITransform* m_transform;
     UIManager*         m_manager;
     bool               m_visible;
+    
     static constexpr int SCREEN_WIDTH = Renderer::SCREEN_WIDTH;
     static constexpr int SCREEN_HEIGHT = Renderer::SCREEN_HEIGHT;
 
     inline void drawPixelRaw(int16_t x, int16_t y, uint16_t color) const {
-        uint16_t* fb = m_manager->getFramebuffer(); if (!fb) return;
-        if (x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT) return;
+        if (!fb || x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT) return;
         fb[y * SCREEN_WIDTH + x] = color;
     }
 
-    void markDirty() { if (m_manager) m_manager->m_dirty = true; }
+    void markDirty();
 };

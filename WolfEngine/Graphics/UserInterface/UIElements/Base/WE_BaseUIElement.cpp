@@ -14,10 +14,8 @@ void BaseUIElement::hide() {
     markDirty();
 }
 
-int16_t BaseUIElement::getX() const { return m_transform->x; }
+int16_t BaseUIElement::getX() const { return resolveLayout(*m_transform).x; }
 
-int16_t BaseUIElement::getY() const {
-    return m_transform->anchor
-        ? m_transform->y + RENDER_SETTINGS.gameRegion.y2
-        : m_transform->y;
-}
+int16_t BaseUIElement::getY() const { return resolveLayout(*m_transform).y; }
+
+void BaseUIElement::markDirty() { if (m_manager) m_manager->m_dirty = true; }

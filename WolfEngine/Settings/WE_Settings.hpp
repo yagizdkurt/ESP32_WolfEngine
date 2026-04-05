@@ -135,13 +135,13 @@ constexpr RenderSettings RENDER_SETTINGS = {
 
     // Rectangular area of the screen used for game rendering. { x1, y1, x2, y2 }
     // x1, y1 — top-left corner (inclusive), x2, y2 — bottom-right corner (inclusive)
-    .gameRegion = { 0, 0, 128, 160 },
+    .gameRegion = { 0, 0, 128, 108 },
 
     // Set to false to disable sprite rendering to set framebuffer pixels directly.
-    .spriteSystemEnabled = true,
+    .spriteSystemEnabled = false,
 
     // Set to false to disable automatic clearing of the framebuffer each frame.
-    .cleanFramebufferEachFrame = true
+    .cleanFramebufferEachFrame = false
 
 };
 

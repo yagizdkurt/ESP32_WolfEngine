@@ -1,8 +1,9 @@
 #pragma once
 #include <stdint.h>
-#include "WE_BaseUIElement.hpp"
+#include "Base/WE_BaseUIElement.hpp"
 
-// Mutable panel state (kept in RAM).
+
+// {width , height , background enabled, background color}
 struct UIPanelState {
     int16_t  width             = 0;
     int16_t  height            = 0;

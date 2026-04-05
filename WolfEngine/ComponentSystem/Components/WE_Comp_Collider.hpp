@@ -10,9 +10,9 @@ enum class ColliderShape : uint8_t { Box, Circle };
 
 class Collider : public Component {
 public:
-    static Collider Box(GameObject* owner, int w, int h, CollisionLayer layer = LAYER_DEFAULT, uint16_t mask = 0xFFFF, bool trigger = false);
-    static Collider Box(GameObject* owner, CollisionLayer layer = LAYER_DEFAULT, uint16_t mask = 0xFFFF, bool trigger = false);
-    static Collider Circle(GameObject* owner, int radius, CollisionLayer layer = LAYER_DEFAULT, uint16_t mask = 0xFFFF, bool trigger = false);
+    static Collider Box(GameObject* owner, int w, int h, CollisionLayer layer = CollisionLayer::DEFAULT, uint16_t mask = 0xFFFF, bool trigger = false);
+    static Collider Box(GameObject* owner, CollisionLayer layer = CollisionLayer::DEFAULT, uint16_t mask = 0xFFFF, bool trigger = false);
+    static Collider Circle(GameObject* owner, int radius, CollisionLayer layer = CollisionLayer::DEFAULT, uint16_t mask = 0xFFFF, bool trigger = false);
     ~Collider();
 
     void setMask   (uint16_t mask)        { m_mask      = mask;    }
@@ -44,7 +44,7 @@ private:
     GameObject*           m_owner          = nullptr;
     const SpriteRenderer* m_spriteRenderer = nullptr;
     ColliderShape         m_shape;
-    CollisionLayer        m_layer          = LAYER_DEFAULT;
+    CollisionLayer        m_layer          = CollisionLayer::DEFAULT;
     uint16_t              m_mask           = 0xFFFF;
     bool                  m_isTrigger      = false;
     float                 m_offsetX        = 0.0f;

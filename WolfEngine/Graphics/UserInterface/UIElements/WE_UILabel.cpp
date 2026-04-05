@@ -17,7 +17,21 @@ void UILabel::draw(UIManager& mgr) {
     const int16_t  step  = FONT_5x7_WIDTH + FONT_5x7_SPACING;
 
     for (int i = 0; text[i] != '\0' && i < WE_UI_LABEL_MAX_LEN; i++) {
-        mgr.drawChar(x + i * step, y, text[i], color);
+        drawChar(x + i * step, y, text[i], color);
+    }
+}
+
+void UILabel::drawChar(int16_t x, int16_t y, char c, uint16_t color) {
+    if (c < 32 || c > 126) c = '?';
+    const uint8_t* glyph = FONT_5x7[c - 32];
+
+    for (int16_t col = 0; col < FONT_5x7_WIDTH; col++) {
+        uint8_t column = glyph[col];
+        for (int16_t row = 0; row < FONT_5x7_HEIGHT; row++) {
+            if (column & (1 << row)) {
+                drawPixelRaw(x + col, y + row, color);
+            }
+        }
     }
 }
 

@@ -96,7 +96,7 @@ void Renderer::drawSprite(const SpriteData& data, int screenX, int screenY) {
 //  World positions are converted to screen via camera.
 // -------------------------------------------------------------
 void Renderer::drawGame() {
-    for (int layer = LAYER_BACKGROUND; layer < LAYER_UI; layer++) {
+    for (int layer = 0; layer < static_cast<int>(RenderLayer::MAX_LAYERS); layer++) {
         for (int i = 0; i < MAX_GAME_OBJECTS; i++) {
 
             SpriteRenderer* sprite = m_layers[layer][i];

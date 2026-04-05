@@ -1,12 +1,12 @@
 #pragma once
 
 #include <stdint.h>
-#include "WE_BaseUIElement.hpp"
+#include "Base/WE_BaseUIElement.hpp"
 
 // Basic shape kinds supported by UIShape.
 enum class UIShapeType : uint8_t { Rectangle, HLine, VLine, };
 
-// Mutable state for UIShape.
+// {width, height, color index, palette pointer, shape type, filled}
 struct UIShapeState {
     int16_t         width      = 0;
     int16_t         height     = 0;

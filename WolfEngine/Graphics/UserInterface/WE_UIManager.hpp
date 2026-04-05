@@ -44,11 +44,7 @@ private:
     void render();
     bool isDirty() const { return m_dirty; }
 
-    void drawChar(int16_t x, int16_t y, char c, uint16_t color);
-    void drawPixel(int16_t x, int16_t y, uint16_t color);
-
     friend class WolfEngine;
     friend class Renderer;
     friend class BaseUIElement;
-    friend class UILabel;
 };

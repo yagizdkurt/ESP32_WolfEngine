@@ -61,7 +61,7 @@ private:
     void unregisterSprite(SpriteRenderer* sprite, int layer);
 
     DisplayDriver* m_driver;
-    SpriteRenderer* m_layers[RENDER_POOL_LAYERS][MAX_GAME_OBJECTS] = { };
+    SpriteRenderer* m_layers[static_cast<uint16_t>(RenderLayer::MAX_LAYERS)][MAX_GAME_OBJECTS] = { };
     uint16_t m_framebuffer[RENDER_SCREEN_WIDTH * RENDER_SCREEN_HEIGHT];
 
     friend class WolfEngine;

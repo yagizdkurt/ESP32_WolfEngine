@@ -1,6 +1,6 @@
 #pragma once
 #include <stdint.h>
-#include "WE_BaseUIElement.hpp"
+#include "Base/WE_BaseUIElement.hpp"
 
 // =============================================================
 //  WE_UILabel
@@ -25,7 +25,7 @@
 
 #define WE_UI_LABEL_MAX_LEN 32
 
-// --- Stored in RAM (mutable) ---
+// {text, color index, palette pointer}
 struct UILabelState {
     char    text[WE_UI_LABEL_MAX_LEN];
     uint8_t colorIndex = PL_GS_White; // default to white
@@ -53,4 +53,6 @@ public:
 
 private:
     UILabelState* m_state;
+
+    void drawChar(int16_t x, int16_t y, char c, uint16_t color);
 };
