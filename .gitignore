@@ -1,0 +1,13 @@
+# Ignore everything...
+*
+# other than...
+# specific top-level files,
+!.gitignore
+!LICENSE
+!README.md
+
+# ProjectFolders
+!IconsPhotosEtc/
+!IconsPhotosEtc/**
+!WolfEngine/
+!WolfEngine/**
