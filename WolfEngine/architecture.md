@@ -1,8 +1,5 @@
 # Architecture
 
-> **Scope:** This document covers `src/WolfEngine/` only. Files in `src/` outside that
-> folder (e.g. `main.cpp`, game-specific classes) are treated as external consumers.
-
 ---
 
 ## 1. Project Overview
@@ -14,30 +11,23 @@ input, audio, physics, UI, and entity management — all without dynamic memory
 allocation and without an OS scheduler driving the game loop (it uses a
 busy-wait fixed-timestep loop on a FreeRTOS task).
 
-**Who uses it:** A single game developer (yagizdkurt) building a custom-PCB handheld.
-`main.cpp` is the only consumer. There are no networked clients, no external services,
-and no multi-user concerns.
-
-**Current state:** Early prototype. 10 commits, several with informal messages
-("blablabla", "about to test"). Multiple subsystems are mid-refactor — several source
-files present in earlier commits have been deleted from the working tree and replaced
-with redesigned equivalents. The API surface is not yet stable.
+**Current state:** The API surface is not yet stable.
 
 ---
 
 ## 2. Technology Stack
 
-| Layer | Technology | Version | Why this choice |
-|---|---|---|---|
-| MCU | ESP32-S (Xtensa LX7) | — | Dual-core, Wi-Fi/BT capable, rich peripheral set, large community |
-| RTOS / SDK | ESP-IDF + FreeRTOS | — | Required by ESP32; provides SPI, I²C, ADC, LEDC, GPIO HAL |
-| Language | C++17 | — | `constexpr`, `if constexpr`, structured bindings; avoids STL to control heap |
-| Display | ST7735 RGB LCD 128×160 | — | Cheap, widely available, SPI-driven, RGB565 framebuffer fits in PSRAM |
-| Display HAL | ESP-IDF `esp_lcd` | — | Abstracts SPI panel ops; DMA flush with completion semaphore |
-| I²C | ESP-IDF `i2c_master` | — | Used for IO expanders and EEPROM |
-| Audio | ESP-IDF `ledc` (PWM) | — | No I²S DAC needed; square-wave tones sufficient for game SFX |
-| IO Expanders | PCF8574 / PCF8575 / MCP23017 | — | Adds GPIO pins for buttons without consuming ESP32 GPIOs |
-| Build system | PlatformIO [UNCLEAR — no `platformio.ini` inside `WolfEngine/`] | — | Standard for ESP-IDF + Arduino ecosystem projects |
+| Layer | Technology | Version |
+|---|---|---|
+| MCU | ESP32-S (Xtensa LX7) | — |
+| RTOS / SDK | ESP-IDF + FreeRTOS | — |
+| Language | C++17 | — |
+| Display | ST7735 RGB LCD 128×160 | — |
+| Display HAL | ESP-IDF `esp_lcd` | — |
+| I²C | ESP-IDF `i2c_master` | — |
+| Audio | ESP-IDF `ledc` (PWM) | — |
+| IO Expanders | PCF8574 / PCF8575 / MCP23017 | — |
+| Build system | PlatformIO [UNCLEAR — no `platformio.ini` inside `WolfEngine/`] | — |
 
 ---
 
@@ -215,8 +205,6 @@ void StartGame();              // blocking game loop
 **Key dependencies:** All other subsystems (renderer, camera, input, UI, sound,
 colliders).
 
-**If this fails:** Nothing runs. The device displays nothing.
-
 ---
 
 ### 6.2 RenderCore
@@ -241,7 +229,6 @@ void render();                 // composites all layers → calls display flush
 - Rotation (0/90/180/270°) implemented by remapping pixel coordinates at blit time —
   no intermediate buffer.
 
-**If this fails:** Screen goes dark or corrupted. All visual output depends on this.
 
 ---
 
@@ -263,7 +250,6 @@ bool isVisible(Vec2, float w, float h);
 - Follow uses linear interpolation each frame (lerp factor hardcoded — not in settings).
 - Culling check lets `RenderCore` skip sprites outside the viewport.
 
-**If this fails:** All sprites render at wrong positions; follow-cam breaks.
 
 ---
 
@@ -300,7 +286,6 @@ virtual void OnTriggerEnter(GameObject*);
 - Component `tick()` is called from `GameObject::Update()` by iterating its own
   component list, not a global system.
 
-**If this fails:** No game entities exist. Engine still boots but game is empty.
 
 ---
 
@@ -318,8 +303,6 @@ game-specific logic in `GameObject` subclasses.
 | `ColliderComponent` | Box or circle shape; collision + trigger layer bitmasks; offset from transform origin. |
 | `AnimatorComponent` | Drives `SpriteRenderer` frame index over time; play/pause; per-animation frame duration. |
 
-**If this fails:** Individual GO features break (no rendering, no collision, no animation)
-without crashing unrelated objects.
 
 ---
 
@@ -343,7 +326,6 @@ void check();                      // called once per frame by game loop
   Exit fires once when separation occurs. Tracked via a triangular packed bitmask.
 - Shape tests: Box–Box (AABB), Circle–Circle (distance²), Box–Circle (clamped point).
 
-**If this fails:** No collision events — triggers, damage, pickups all stop working.
 
 ---
 
@@ -373,7 +355,6 @@ float getAxis(Axis a);          // -1.0 to 1.0
 - ADC joystick: raw reading normalised against calibration min/mid/max values defined
   in settings.
 
-**If this fails:** No player input. Game runs but is uncontrollable.
 
 ---
 
@@ -406,7 +387,6 @@ BaseUIElement  (show/hide, dirty flag, drawPixelRaw, UITransform)
   any one is dirty (see §12).
 - Font is a static 5×7 bitmap array (`WE_Font.hpp`) covering ASCII 32–126.
 
-**If this fails:** No HUD, no menus, no score display.
 
 ---
 
@@ -433,7 +413,6 @@ bool isSFXPlaying();
 - Sequencing is managed by checking elapsed time each `tick()` call — no RTOS timer.
 - No volume control, no waveform mixing (see §12).
 
-**If this fails:** Silent game — no other system is affected.
 
 ---
 
@@ -458,7 +437,6 @@ bool requiresByteSwap;
   semaphore so the CPU isn't spinning.
 - `requiresByteSwap = true` — the panel expects big-endian RGB565.
 
-**If this fails:** Black screen. All rendering is buffered correctly but never appears.
 
 ---
 
@@ -638,55 +616,14 @@ no config files read from flash, and no over-the-air configuration.
 | `WE_CLEAR_FRAMEBUFFER` | Zeroes framebuffer each frame (disable for overdraw optimisation) |
 | `MODULE_DEBUG_ENABLED` (per-file) | Enables `DebugLog`/`DebugErr` output via `esp_log` |
 
-### Secrets / credentials
-
-None. This is a local embedded device with no network services.
-
 ---
 
-## 11. Build, Test & Deploy
-
-### Building
-
-```bash
-# Assumed PlatformIO workflow (platformio.ini not located inside WolfEngine/)
-pio run                        # compile
-pio run --target upload        # compile + flash over USB
-pio device monitor             # serial output (115200 baud, ESP-IDF default)
-```
-
-The engine is header-heavy (`Settings/` is all compile-time). Changing any settings
-header triggers a wide recompile — expect 30–90 s clean builds on typical hardware.
-
-### Testing
-
-**There are no tests.** No unit test framework, no integration harness, no test
-directory was found in the repository. All validation is currently by flashing and
-observing behaviour on the physical device.
-
-For a future test strategy, the highest-value targets would be:
-- `WEColliderManager` intersection math (pure functions, no hardware dependency)
-- `WEUITransformHelpers` anchor resolution (pure math)
-- `Vec2` operator correctness
-
-### CI/CD
-
-None found.
-
-### Deployment
-
-Firmware is flashed directly to the ESP32-S over USB-UART using the PlatformIO
-uploader (wraps `esptool.py`). There is no OTA update mechanism in the engine.
-
----
-
-## 12. Known Issues, Gaps & Technical Debt
+## 11. Known Issues, Gaps & Technical Debt
 
 This section documents what a new engineer will likely stumble on.
 
 | Issue | Severity | Detail |
 |---|---|---|
-| **No tests** | High | Every change is validated only on hardware. Regressions are invisible until the device is flashed. |
 | **API in active flux** | High | Several files deleted from working tree (`ComponentManager`, old display driver, old input manager, old sound core). Public interfaces will change. Do not build stable game code on top of deleted paths. |
 | **`WE_GORegistry` not wired** | Medium | `WE_GORegistry.hpp` defines a registry struct but it is not referenced in `WolfEngine.cpp` or the game loop. Either the engine iterates a different internal list, or this is dead code awaiting integration. |
 | **Hardcoded camera lerp** | Low | Camera follow interpolation factor is a literal constant inside `WE_Camera.cpp`, not exposed in `WE_Settings.hpp`. |
