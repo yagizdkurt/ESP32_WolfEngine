@@ -1,15 +1,11 @@
-# Architecture
+# Documentation
 
 ---
 
 ## 1. Project Overview
 
-WolfEngine is a hand-written 2D game engine for the **ESP32-S** microcontroller,
-designed to drive a handheld game device built around a **128×160 ST7735 LCD**.
-It provides the full vertical slice a game needs on constrained hardware: display,
-input, audio, physics, UI, and entity management — all without dynamic memory
-allocation and without an OS scheduler driving the game loop (it uses a
-busy-wait fixed-timestep loop on a FreeRTOS task).
+WolfEngine is a 2D game engine for the **ESP32** microcontroller,
+designed to drive a handheld game device built around a TFT screen.
 
 **Current state:** The API surface is not yet stable.
 
@@ -22,119 +18,19 @@ busy-wait fixed-timestep loop on a FreeRTOS task).
 | MCU | ESP32-S (Xtensa LX7) | — |
 | RTOS / SDK | ESP-IDF + FreeRTOS | — |
 | Language | C++17 | — |
-| Display | ST7735 RGB LCD 128×160 | — |
-| Display HAL | ESP-IDF `esp_lcd` | — |
 | I²C | ESP-IDF `i2c_master` | — |
 | Audio | ESP-IDF `ledc` (PWM) | — |
 | IO Expanders | PCF8574 / PCF8575 / MCP23017 | — |
-| Build system | PlatformIO [UNCLEAR — no `platformio.ini` inside `WolfEngine/`] | — |
+| Build system | PlatformIO | — |
 
 ---
 
 ## 3. Repository Structure
-
-```
-src/WolfEngine/
-│
-├── WolfEngine.hpp / .cpp          # Engine singleton — init + game loop
-│
-├── Settings/                      # Compile-time configuration (no runtime config)
-│   ├── WE_Settings.hpp            # Master include: pulls all settings headers
-│   ├── WE_PINDEFS.hpp             # All GPIO, SPI, I²C pin numbers
-│   ├── WE_InputSettings.hpp       # Per-controller button map, expander type, joystick ADC
-│   ├── WE_RenderSettings.hpp      # Background color, game region rect, feature flags
-│   └── WE_Layers.hpp              # RenderLayer enum + CollisionLayer bitmask enum
-│
-├── GameObjectSystem/              # Entity base class and registry
-│   ├── WE_GameObject.hpp / .cpp   # Base class, factory, lifecycle, component dispatch
-│   └── WE_GORegistry.hpp          # Fixed-size pointer array for all live GameObjects
-│
-├── ComponentSystem/               # ECS components (no ComponentManager — deleted/refactoring)
-│   └── Components/
-│       ├── WE_BaseComp.hpp        # Abstract base: ComponentType enum, tick()
-│       ├── WE_Comp_Transform.hpp  # Position (Vec2) + width/height — always present on GO
-│       ├── WE_Comp_SpriteRenderer.hpp / .cpp  # Sprite asset + palette + rotation; auto-registers with RenderCore
-│       ├── WE_Comp_Collider.hpp / .cpp        # Box/Circle shapes; collision + trigger layer bitmasks
-│       ├── WE_Comp_Animator.hpp / .cpp        # Frame-strip animation driver on top of SpriteRenderer
-│       └── WE_Components.hpp      # Convenience include for all components
-│
-├── Graphics/
-│   ├── RenderSystem/
-│   │   ├── WE_RenderCore.hpp / .cpp  # Framebuffer owner; layer management; sprite blit + rotation
-│   │   └── WE_Camera.hpp / .cpp      # World↔screen transform; follow target; frustum cull
-│   ├── SpriteSystem/
-│   │   ├── WE_Sprite.hpp             # Sprite asset: pixel data (palette indices), constexpr factory
-│   │   ├── WE_SpriteData.hpp         # Render-ready struct passed from SpriteRenderer → RenderCore
-│   │   └── WE_SpriteRotation.hpp     # Rotation enum (R0 / R90 / R180 / R270)
-│   ├── ColorPalettes/                # Five built-in 32-entry RGB565 palettes; index 0 = transparent
-│   │   ├── WE_Palettes.hpp           # Convenience include
-│   │   ├── WE_Palette_Grayscale.hpp
-│   │   ├── WE_Palette_Warm.hpp
-│   │   ├── WE_Palette_Cool.hpp
-│   │   ├── WE_Palette_Gameboy.hpp
-│   │   └── WE_Palette_Sunset.hpp
-│   └── UserInterface/
-│       ├── WE_UIManager.hpp / .cpp   # UI root: owns element array, dirty tracking, render dispatch
-│       ├── Fonts/
-│       │   └── WE_Font.hpp           # 5×7 bitmap font for ASCII 32–126
-│       └── UIElements/
-│           ├── Base/
-│           │   ├── WE_BaseUIElement.hpp / .cpp  # Abstract element: show/hide, dirty flag, drawPixelRaw()
-│           │   ├── WE_UITransform.hpp            # Position, size, margins, UIAnchor enum (9 positions)
-│           │   └── WE_UITransformHelpers.hpp     # Anchor resolution math (resolveAnchor, resolveLayout)
-│           ├── WE_UILabel.hpp / .cpp   # Text label (32-char max, 5×7 font)
-│           ├── WE_UIShape.hpp / .cpp   # Rectangle / HLine / VLine, filled or outline
-│           ├── UIPanel.hpp / .cpp      # Container with optional background; translates child positions
-│           └── WE_UIElements.hpp       # Convenience include
-│
-├── InputSystem/
-│   ├── WE_InputManager.hpp / .cpp  # Owns all Controller instances; shared ADC handle; tick() per frame
-│   └── WE_Controller.hpp / .cpp    # Single physical controller: GPIO/expander polling, debounce, ADC joystick
-│
-├── Physics/
-│   ├── WE_ColliderManager.hpp / .cpp  # O(n²) pair iteration; shape intersection; Enter/Stay/Exit dispatch
-│
-├── Sound/
-│   ├── WE_SoundManager.hpp / .cpp  # Two PWM channels (music + SFX); note sequencer; loop + callback
-│   └── WE_Notes.hpp                # Note_t frequency enum, octaves 1–8 with semitones
-│
-├── Drivers/
-│   ├── DisplayDrivers/
-│   │   ├── WE_Display_Driver.hpp       # Abstract display interface (initialize, flush, backlight, sleep)
-│   │   ├── WE_Display_ST7735.hpp / .cpp  # Concrete: SPI @ 40 MHz, DMA flush, FreeRTOS semaphore
-│   └── IODrivers/
-│       ├── WE_IExpander.hpp            # Abstract expander interface (begin, pinRead)
-│       ├── WE_ExpanderDrivers.hpp      # ExpanderType enum + ExpanderSettings struct
-│       ├── WE_PCF8574.hpp              # 8-bit quasi-bidirectional expander (0x20–0x27)
-│       ├── WE_PCF8575.hpp              # 16-bit variant of PCF8574
-│       └── WE_MCP23017.hpp             # Register-based 16-bit expander, Port A + B, pull-ups
-│
-└── Utilities/
-    ├── WE_I2C.hpp / .cpp          # I²C bus singleton: I2C_NUM_0, 400 kHz, scan, reg read/write
-    ├── WE_Time.hpp / .cpp         # Wall clock + game clock (pause-aware); since/elapsed/check helpers
-    ├── WE_Timer.hpp / .cpp        # Timer struct wrapping WETime; start/stop/reset/check
-    ├── WE_Vector2d.hpp            # Vec2 (float) + IntVec2; full operator set; lerp, dist, fromAngle
-    ├── WE_EEPROM24LC512.hpp       # 64 KB I²C EEPROM; page-safe burst write; repeated-start read
-    └── WE_Debug.h                 # DebugLog/DebugErr macros → ESP_LOGI/LOGE; no-op when disabled
-```
-
-**Non-obvious notes:**
-
-- `ComponentSystem/ComponentManager.hpp` is **deleted** in the current working tree.
-  The engine tick loop directly iterates component arrays on each `GameObject`. A
-  centralised manager was apparently removed or never finished.
-- `WE_GORegistry.hpp` declares a pointer registry but is **not wired into the engine**
-  in the files read — status unclear.
-- The `Drivers/` hierarchy is a **reorganisation in progress**: the old
-  `Graphics/RenderSystem/DisplayDrivers/` path still exists in git history but was
-  deleted and replaced with `Drivers/DisplayDrivers/`.
+Repository structure is in Structure.md for convenience to maintainers. You can check it from there.
 
 ---
 
 ## 4. Architecture Style & Key Patterns
-
-**Overall style:** Embedded layered monolith. Everything compiles into a single firmware
-image. There are no processes, no IPC, no network services.
 
 ### Design patterns in use
 
@@ -149,23 +45,14 @@ image. There are no processes, no IPC, no network services.
 | Placement new | `WEController` for expander objects | Avoids heap; expander constructed in a `uint8_t` buffer sized to the largest concrete type |
 | Constexpr validation | `Sprite::Create()` | Illegal sprite dimensions caught at compile time, not runtime |
 
-### What is intentionally avoided (inferred)
-
 - **Heap allocation:** No `new`/`delete` observed in engine code. All fixed-size arrays.
   Reason: heap fragmentation is fatal on embedded targets with limited SRAM.
 - **STL containers:** No `std::vector`, `std::map`, etc. Reason: code-size and
   heap dependency.
-- **Virtual dispatch for components:** Components share a base but are ticked by
-  type-cast direct calls. Avoids vtable overhead per-object per-frame.
 
 ---
 
 ## 5. Entry Points & Bootstrapping
-
-There is exactly one entry point.
-
-**File:** [src/main.cpp](../main.cpp)  
-**ESP-IDF entry:** `extern "C" void app_main()`
 
 ```
 app_main()
@@ -557,18 +444,15 @@ from `ExpanderSettings.type` at controller init time.
 
 ## 8. Data Layer
 
-WolfEngine has no database and no OS-level file system.
-
 | Storage | Technology | Usage |
 |---|---|---|
-| Runtime state | Static/stack arrays | All GameObjects, colliders, sprites, UI elements |
 | Persistent save data | 24LC512 I²C EEPROM | 64 KB, page-safe writes via `WE_EEPROM24LC512` |
 | Framebuffer | Static `uint16_t[]` | RGB565, `screenWidth × screenHeight` words |
 
 **Allocation strategy:** No `new`/`delete` is used anywhere in the engine. All
 collections are fixed-size arrays sized by constants in `WE_Settings.hpp`
 (`MAX_GAME_OBJECTS`, `MAX_COLLIDERS`, etc.). This is a deliberate choice to eliminate
-heap fragmentation on a device with ~520 KB of SRAM.
+heap fragmentation.
 
 **EEPROM access:** `readBytes()` uses repeated-start I²C for atomic address-then-data
 in one transaction. `writeBytes()` splits writes at 128-byte page boundaries
@@ -620,17 +504,4 @@ no config files read from flash, and no over-the-air configuration.
 
 ## 11. Known Issues, Gaps & Technical Debt
 
-This section documents what a new engineer will likely stumble on.
-
-| Issue | Severity | Detail |
-|---|---|---|
-| **API in active flux** | High | Several files deleted from working tree (`ComponentManager`, old display driver, old input manager, old sound core). Public interfaces will change. Do not build stable game code on top of deleted paths. |
-| **`WE_GORegistry` not wired** | Medium | `WE_GORegistry.hpp` defines a registry struct but it is not referenced in `WolfEngine.cpp` or the game loop. Either the engine iterates a different internal list, or this is dead code awaiting integration. |
-| **Hardcoded camera lerp** | Low | Camera follow interpolation factor is a literal constant inside `WE_Camera.cpp`, not exposed in `WE_Settings.hpp`. |
-| **Coarse UI dirty tracking** | Low | `UIManager::render()` redraws all elements when any element is dirty. For a 128×160 screen this is tolerable, but will become visible if the UI element count grows. |
-| **O(n²) collision detection** | Low | Fine at `MAX_COLLIDERS = 64`. Would need a spatial hash or broad-phase if the limit ever rises significantly. |
-| **No audio volume / mixing** | Low | Two PWM channels at fixed duty cycle. No fade-in/out, no relative volume between music and SFX. |
-| **No scene / state management** | Low | There is no `Scene`, `GameState`, or `StateMachine` abstraction. The user manages game states manually in game code. A growing game will need to invent this. |
-| **Sprite pixel data is `const uint8_t*`** | Low | Sprites are ROM assets only. No runtime-generated sprites or partial updates without a design change to `WE_Sprite`. |
-| **No error handling on I²C** | Low | `WEI2C` returns `esp_err_t` but callers (expanders, EEPROM) do not consistently propagate or log errors. A loose connector will produce silent failures. |
-| **5 ms EEPROM write delay is blocking** | Low | `writeBytes()` calls `vTaskDelay(pdMS_TO_TICKS(5))` between pages. Writing more than ~128 bytes will stall the game loop for perceptible time. Write save data only outside active gameplay or from a background task. |
+Issues have been moved into Issues.md file.
