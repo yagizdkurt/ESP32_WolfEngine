@@ -7,6 +7,7 @@ void WolfEngine::StartEngine() {
     I2CManager::begin();
 
     // Engine subsystem initialization
+    m_saveManager.init();
     m_InputManager.init();
     m_renderer.initialize();
     m_Camera.initialize();

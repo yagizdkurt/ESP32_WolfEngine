@@ -3,6 +3,7 @@
 #include "WE_InputSettings.hpp"
 #include "WE_Layers.hpp"
 #include "WE_RenderSettings.hpp"
+#include "WE_SaveSettings.hpp"
 
 /*
 ============================================================================================
