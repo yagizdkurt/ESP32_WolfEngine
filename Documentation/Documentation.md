@@ -36,7 +36,8 @@ Repository structure is in Structure.md for convenience to maintainers. You can 
 
 | Pattern | Where | Detail |
 |---|---|---|
-| Singleton | `WolfEngine`, `WEInputManager`, `WECamera`, `WEUIManager`, `WESoundManager`, `WEI2C`, `WE_SaveManager` | Accessed via global free functions (`Engine()`, `Input()`, `Save()`, etc.) |
+| Singleton | `WolfEngine`, `WEInputManager`, `WECamera`, `WEUIManager`, `WESoundManager`, `WEI2C` | Accessed via global free functions (`Engine()`, `Input()`, etc.) |
+| Module registry + self-registration | `ModuleRegistry`, `ModuleRegistrar<T>`, `WE_Modules.hpp` | Optional engine systems register themselves at program startup via a static `ModuleRegistrar<T>` instance; the registry calls `InitAll()`/`UpdateAll()` at the right lifecycle points |
 | Entity-Component System | `GameObjectSystem` + `ComponentSystem` | Lightweight: no archetype tables, no dynamic dispatch via vtable arrays — components are owned by the GO and ticked via direct method calls |
 | Factory method | `GameObject::Create<T>()`, `Collider::Box()`, `Collider::Circle()`, `Sprite::Create()` | Hides construction details; `Create<T>` placement-news into a registry slot |
 | Abstract interface | `WE_Display_Driver`, `WE_IExpander`, `WE_IEEPROMDriver` | Lets driver selection be decoupled from the system that uses it |
@@ -45,10 +46,8 @@ Repository structure is in Structure.md for convenience to maintainers. You can 
 | Placement new | `WEController` for expander objects; `WE_SaveManager` for EEPROM drivers | Avoids heap; driver constructed in a `uint8_t` buffer sized to the largest concrete type |
 | Constexpr validation | `Sprite::Create()`, `WE_SaveManager` slot guards | Illegal values caught at compile time, not runtime |
 
-- **Heap allocation:** No `new`/`delete` observed in engine code. All fixed-size arrays.
-  Reason: heap fragmentation is fatal on embedded targets with limited SRAM.
-- **STL containers:** No `std::vector`, `std::map`, etc. Reason: code-size and
-  heap dependency.
+- **Heap allocation:** The core game loop and ECS use no dynamic allocation (fixed-size arrays throughout). The module system is the one exception: `ModuleRegistrar<T>` calls `new T()` once at startup to create each module, and `ModuleRegistry` holds them in a `std::vector`. This is intentional — modules are long-lived singletons allocated once before the game loop begins.
+- **STL containers:** `ModuleRegistry` uses `std::vector<IModule*>` (module list only). All other engine systems avoid STL for code-size and heap reasons.
 
 ---
 
@@ -59,12 +58,13 @@ app_main()
   │
   ├─ Engine().StartEngine()
   │     ├─ WEI2C::getInstance().init()          // I²C bus @ 400 kHz
-  │     ├─ WE_SaveManager::init()               // placement-news EEPROM driver(s) from WE_SAVE_EEPROMS[]
-  │     ├─ DisplayDriver::initialize()           // SPI bus, ST7735 reset, init sequence
   │     ├─ WEInputManager::init()               // GPIO config for all controllers + ADC
-  │     ├─ WESoundManager::init()               // LEDC timer + channels for music/SFX pins
+  │     ├─ DisplayDriver::initialize()           // SPI bus, ST7735 reset, init sequence
   │     ├─ WECamera::init()                     // Sets game region, default zoom
-  │     └─ WEUIManager::initialize()            // Clears element list
+  │     ├─ WEUIManager::initialize()            // Clears element list
+  │     ├─ WESoundManager::init()               // LEDC timer + channels for music/SFX pins
+  │     └─ ModuleRegistry::InitAll()            // calls OnInit() on every registered module
+  │           └─ (e.g.) WE_SaveManager::OnInit()  // placement-news EEPROM driver(s)
   │
   ├─ UI().setElements(uiElements[])             // Register null-terminated UI element array
   │
@@ -86,12 +86,21 @@ loop. Without it nothing starts and nothing ticks.
 **Public interface:**
 ```cpp
 WolfEngine& Engine();          // global accessor
-void StartEngine();            // one-time hardware init
+void StartEngine();            // one-time hardware init → core subsystems → ModuleRegistry::InitAll()
 void StartGame();              // blocking game loop
 ```
 
-**Key dependencies:** All other subsystems (renderer, camera, input, UI, sound,
-colliders).
+**Frame tick order (`gameTick()`):**
+1. `InputManager::tick()` — poll buttons / joysticks
+2. `ModuleRegistry::UpdateAll()` — tick all registered modules
+3. `GameObject::componentTick()` for each active object — component logic before game logic
+4. `GameObject::Update()` for each active object — user game logic
+5. `ColliderManager::tick()` — collision detection + events
+6. `Camera::followTick()` — camera follow after movement
+7. `Renderer::render()` — composite framebuffer + DMA flush
+
+**Key dependencies:** All core subsystems (renderer, camera, input, UI, sound, colliders)
+plus `ModuleRegistry` for optional modules.
 
 ---
 
@@ -356,31 +365,105 @@ from `ExpanderSettings.type` at controller init time.
 
 ---
 
-### 6.13 SaveManager
+### 6.13 Module System
+
+**Why it exists:** Provides a zero-boilerplate way to add optional engine subsystems that need `OnInit()` / `OnUpdate()` / `OnShutdown()` hooks without touching `WolfEngine.cpp`. Modules self-register at startup via a static object; the engine calls them in a single loop.
+
+**Key files:**
+
+| File | Role |
+|---|---|
+| `Modules/WE_IModule.hpp` | Abstract base all modules must inherit |
+| `Modules/WE_ModuleRegistry.hpp` | Static registry + `ModuleRegistrar<T>` helper |
+| `Settings/WE_Modules.hpp` | Compile-time feature flags (`#define SaveLoadModule`, etc.) |
+| `Modules/<Name>/WE_<Name>Module.cpp` | One-line self-registration per module |
+
+**`IModule` interface:**
+```cpp
+class IModule {
+public:
+    virtual const char* GetName()     const = 0;
+    virtual int         GetPriority() const = 0;  // reserved — not yet used for ordering
+    virtual void OnInit()     {}
+    virtual void OnUpdate()   {}
+    virtual void OnShutdown() {}
+};
+```
+
+**`ModuleRegistry` — static registry:**
+```cpp
+ModuleRegistry::Register(IModule*);   // called automatically by ModuleRegistrar<T>
+ModuleRegistry::InitAll();            // called once in StartEngine()
+ModuleRegistry::UpdateAll();          // called once per frame in gameTick()
+ModuleRegistry::ShutdownAll();        // called in reverse registration order
+
+template<typename T>
+T* ModuleRegistry::Get<T>();          // retrieve a module by type at runtime
+```
+
+**`ModuleRegistrar<T>` — self-registration:**
+```cpp
+// In your module's .cpp file:
+static ModuleRegistrar<MyModule> s_registrar;
+```
+When the translation unit is loaded, `s_registrar`'s constructor runs `ModuleRegistry::Register(new MyModule())`. No changes to `WolfEngine.cpp` are needed.
+
+**Adding a new module — step by step:**
+1. Create your class inheriting `IModule` (implement `GetName()`, `GetPriority()`, and whichever hooks you need).
+2. Add a feature flag in `Settings/WE_Modules.hpp`:
+   ```cpp
+   #define MyNewModule
+   ```
+3. Create a thin `WE_MyNewModuleModule.cpp`:
+   ```cpp
+   #include "WolfEngine/Settings/WE_Modules.hpp"
+   #ifdef MyNewModule
+   #include "WE_MyNewModule.hpp"
+   #include "WolfEngine/Modules/WE_ModuleRegistry.hpp"
+   static ModuleRegistrar<WE_MyNewModule> s_registrar;
+   #endif
+   ```
+4. Comment out the `#define` in `WE_Modules.hpp` to disable the module entirely — it will not be compiled or linked.
+
+**Retrieving a module from game code:**
+```cpp
+auto* save = ModuleRegistry::Get<WE_SaveManager>();
+if (save) save->write(SAVE_SLOT_0, myData);
+```
+
+---
+
+### 6.14 SaveManager
 
 **Why it exists:** Provides a safe, structured API for reading and writing persistent game data to I²C EEPROM without exposing the caller to page boundaries, address arithmetic, multi-chip routing, or raw byte layouts.
 
-**Global accessor:** `Save()`
+**Registered as a module via:** `Modules/SaveLoadSystem/WE_SaveManagerModule.cpp` (guarded by `#ifdef SaveLoadModule` in `WE_Modules.hpp`).
 
 **Quick setup:**
-1. Open `Settings/WE_SaveSettings.hpp`
-2. Add your EEPROM chip to `WE_SAVE_EEPROMS[]` (address + driver type)
-3. Add a named entry to the `SaveSlot` enum
-4. Add a matching `SaveSlotDef` entry in `SAVE_SLOTS[]` with the size of your struct
+1. Enable in `Settings/WE_Modules.hpp`: `#define SaveLoadModule`
+2. Open `Settings/WE_SaveSettings.hpp`
+3. Add your EEPROM chip to `WE_SAVE_EEPROMS[]` (address + driver type)
+4. Add a named entry to the `SaveSlot` enum
+5. Add a matching `SaveSlotDef` entry in `SAVE_SLOTS[]` with the size of your struct
+
+**Accessing from game code:**
+```cpp
+WE_SaveManager* save = ModuleRegistry::Get<WE_SaveManager>();
+```
 
 **Public interface:**
 ```cpp
 // Write — call between levels or on pause, NOT every frame
 // Blocks 5–20 ms per 128-byte page while the chip writes internally
 template<typename T>
-esp_err_t Save().write(SaveSlot slot, const T& data);
+esp_err_t write(SaveSlot slot, const T& data);
 
 // Read — fast (~1 ms), safe to call at any time
 template<typename T>
-esp_err_t Save().read(SaveSlot slot, T& outData);
+esp_err_t read(SaveSlot slot, T& outData);
 
-esp_err_t Save().erase(SaveSlot slot);   // reset one slot to 0xFF
-esp_err_t Save().eraseAll();             // erase all chips — do NOT call during gameplay
+esp_err_t erase(SaveSlot slot);    // reset one slot to 0xFF
+esp_err_t eraseAll();              // erase all chips — do NOT call during gameplay
 ```
 
 **Handling read results:**
@@ -388,7 +471,8 @@ esp_err_t Save().eraseAll();             // erase all chips — do NOT call duri
 struct PlayerSave { int16_t health; int16_t score; uint8_t level; };
 
 PlayerSave data;
-switch (Save().read(SAVE_SLOT_PLAYER, data)) {
+auto* save = ModuleRegistry::Get<WE_SaveManager>();
+switch (save->read(SAVE_SLOT_0, data)) {
     case ESP_OK:              /* use data normally */                     break;
     case WE_ERR_SAVE_EMPTY:   /* first boot — initialise to defaults */   break;
     case WE_ERR_SAVE_VERSION: /* save struct changed — reset or migrate */ break;
@@ -417,21 +501,24 @@ When you add/remove/reorder fields in a save struct, increment `WE_SAVE_VERSION`
 ### Flow A — Frame render cycle
 
 ```
-1. StartGame() busy-waits until ENGINE_FRAME_TIME (33 333 µs at 30 fps) has elapsed.
+1. StartGame() busy-waits until TARGET_FRAME_TIME_US (33 333 µs at 30 fps) has elapsed.
 
 2. WEInputManager::tick()
    └─ For each controller: poll GPIO or I²C expander pins
       → debounce → update button state bitmasks
       → read ADC channels → normalise joystick axes
 
-3. WETime::tick()  — advances game clock, increments frameCount
+3. ModuleRegistry::UpdateAll()
+   └─ Calls OnUpdate() on every registered module in registration order
+      (e.g. WE_SaveManager::OnUpdate() — currently a no-op, reserved for future use)
 
 4. For each active GameObject in registry:
-   └─ GO.Update()
-      ├─ calls user game logic (virtual override)
-      └─ calls tick() on each enabled Component
+   └─ componentTick() — ticks all enabled components (Animator, Collider, etc.)
 
-5. WEColliderManager::check()
+5. For each active GameObject in registry:
+   └─ Update() — calls user game logic (virtual override)
+
+6. WEColliderManager::tick()
    └─ For every pair (i, j) of registered colliders:
       a. Apply layer bitmask filter — skip if no interaction
       b. Run shape intersection test (AABB / circle / mixed)
@@ -439,11 +526,10 @@ When you add/remove/reorder fields in a save struct, increment `WE_SAVE_VERSION`
       d. Fire OnCollisionEnter / Stay / Exit  or  OnTriggerEnter / Stay / Exit
          directly on both GameObjects
 
-6. WEUIManager::render()  [only if any element is dirty]
-   └─ For each UIElement: call element.draw() → writes pixels into framebuffer region
+7. Camera::followTick() — lerp camera toward follow target's new position
 
-7. WERenderCore::render()
-   └─ Clear framebuffer (if WE_CLEAR_FRAMEBUFFER defined)
+8. WERenderCore::render()
+   └─ Clear framebuffer (if cleanFramebufferEachFrame = true in RENDER_SETTINGS)
    └─ For each layer (BackGround → FX):
       For each registered SpriteData on this layer:
         a. Camera::worldToScreen() → pixel position
@@ -540,20 +626,40 @@ no config files read from flash, and no over-the-air configuration.
 | File | Controls | Change requires |
 |---|---|---|
 | `WE_Settings.hpp` | Master include — pulls all settings headers | Recompile |
+| `WE_Modules.hpp` | Module feature flags (`#define SaveLoadModule`, etc.) — comment out to disable a module entirely | Recompile |
 | `WE_PINDEFS.hpp` | All GPIO numbers: SPI, I²C, audio, display DC/Reset/CS | Recompile |
 | `WE_InputSettings.hpp` | Per-controller button→pin map, expander type & address, joystick ADC channel & calibration | Recompile |
 | `WE_RenderSettings.hpp` | Background color (RGB565), game region rect, framebuffer clear flag | Recompile |
 | `WE_Layers.hpp` | `RenderLayer` enum values, `CollisionLayer` bitmask values | Recompile + update all layer assignments |
 | `WE_SaveSettings.hpp` | EEPROM chip list, save slot names + sizes, integrity on/off, magic/version constants | Recompile |
 
-### Feature flags (in `WE_Settings.hpp`)
+### Feature flags
+
+**Display target** — defined in `WE_Settings.hpp` (only one at a time):
+
+| Flag | Effect |
+|---|---|
+| `DISPLAY_ST7735` | Selects ST7735 as display driver |
+| `DISPLAY_CUSTOM` | Use a custom display driver |
+
+**Module flags** — defined in `WE_Modules.hpp` (comment out to strip module from build):
+
+| Flag | Module enabled |
+|---|---|
+| `SaveLoadModule` | `WE_SaveManager` — I²C EEPROM save/load system |
+
+**Per-file debug flag:**
 
 | Flag | Effect when defined |
 |---|---|
-| `WE_USE_ST7735` | Selects ST7735 as display driver (vs custom) |
-| `WE_SPRITE_SYSTEM_ENABLED` | Includes sprite registration in render loop |
-| `WE_CLEAR_FRAMEBUFFER` | Zeroes framebuffer each frame (disable for overdraw optimisation) |
-| `MODULE_DEBUG_ENABLED` (per-file) | Enables `DebugLog`/`DebugErr` output via `esp_log` |
+| `MODULE_DEBUG_ENABLED` | Enables `DebugLog`/`DebugErr` output via `esp_log` in that translation unit |
+
+**Runtime settings** (structs in `WE_Settings.hpp`, not `#define` flags):
+
+| Setting | Where | Controls |
+|---|---|---|
+| `RENDER_SETTINGS.spriteSystemEnabled` | `WE_RenderSettings.hpp` | Includes sprite registration in render loop |
+| `RENDER_SETTINGS.cleanFramebufferEachFrame` | `WE_RenderSettings.hpp` | Zeroes framebuffer each frame |
 
 ---
 

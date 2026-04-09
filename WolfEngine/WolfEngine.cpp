@@ -6,13 +6,15 @@ void WolfEngine::StartEngine() {
     // Driver initialization
     I2CManager::begin();
 
-    // Engine subsystem initialization
-    m_saveManager.init();
+    // Engine CORE subsystem initialization
     m_InputManager.init();
     m_renderer.initialize();
     m_Camera.initialize();
     m_UIManager.initialize(m_renderer.m_framebuffer);
     m_SoundManager.Initialize();
+
+    // Engine Modules initialization
+    ModuleRegistry::InitAll();
 
     // default initializations for convenience
     BaseUIElement **defaultUI = new BaseUIElement*[1] { nullptr };
@@ -42,6 +44,9 @@ void WolfEngine::StartGame() {
 void WolfEngine::gameTick() {
     // Update input states first
     m_InputManager.tick();
+
+    // Update engine modules
+    ModuleRegistry::UpdateAll();
 
     // Update component ticks of each object before Update() so that components can modify object state before game logic runs
     for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj && obj->isActive) obj->componentTick();

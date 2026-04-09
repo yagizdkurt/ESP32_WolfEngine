@@ -9,6 +9,7 @@ WolfEngine/
 │
 ├── Settings/                      # Compile-time configuration (no runtime config)
 │   ├── WE_Settings.hpp            # Master include: pulls all settings headers
+│   ├── WE_Modules.hpp             # Module feature flags: #define SaveLoadModule, etc.
 │   ├── WE_PINDEFS.hpp             # All GPIO, SPI, I²C pin numbers
 │   ├── WE_InputSettings.hpp       # Per-controller button map, expander type, joystick ADC
 │   ├── WE_RenderSettings.hpp      # Background color, game region rect, feature flags
@@ -82,9 +83,14 @@ WolfEngine/
 │       ├── WE_PCF8575.hpp                # 16-bit variant of PCF8574
 │       └── WE_MCP23017.hpp               # Register-based 16-bit expander, Port A + B, pull-ups
 │
-├── SaveLoadSystem/                # Persistent save data manager
-│   ├── WE_SaveManager.hpp         # Manager class: template write<T>/read<T>, compile-time slot guards
-│   └── WE_SaveManager.cpp         # init() (placement-new drivers), getSlotAddress(), erase(), eraseAll()
+├── Modules/                       # Optional engine subsystems — self-register via ModuleRegistrar<T>
+│   ├── WE_IModule.hpp             # Abstract base: GetName(), GetPriority(), OnInit/OnUpdate/OnShutdown
+│   ├── WE_ModuleRegistry.hpp      # Static registry + ModuleRegistrar<T> self-registration helper
+│   └── SaveLoadSystem/            # Persistent save data module
+│       ├── WE_SaveManager.hpp     # IModule subclass: template write<T>/read<T>, compile-time slot guards
+│       ├── WE_SaveManager.cpp     # OnInit() (placement-new drivers), getSlotAddress(), erase(), eraseAll()
+│       ├── WE_SaveManagerModule.cpp  # Self-registration: static ModuleRegistrar<WE_SaveManager>, #ifdef SaveLoadModule
+│       └── WE_SaveSettings.hpp    # EEPROM chip list, slot definitions, integrity flag (used by SaveManager only)
 │
 └── Utilities/
     ├── WE_I2C.hpp / .cpp          # I²C bus singleton: I2C_NUM_0, 400 kHz, scan, reg read/write
@@ -104,8 +110,13 @@ WolfEngine/
   in the files read — status unclear.
 - `EEPROM24LC512` (concrete driver) now lives in `Drivers/EepromDrivers/` and inherits
   `WE_IEEPROMDriver`. It is not in `Utilities/` — that listing was incorrect.
-  Do not use it directly in game code; always go through `Save()` (WE_SaveManager).
-- `WE_SaveManager` has **no tick** — it is purely on-demand. No per-frame registration needed.
+  Do not use it directly in game code; always go through `ModuleRegistry::Get<WE_SaveManager>()`.
+- `WE_SaveSettings.hpp` lives inside `Modules/SaveLoadSystem/`, not in `Settings/`.
+  `Settings/WE_Modules.hpp` is the only module-related file in `Settings/`.
+- `WE_SaveManager::OnUpdate()` is currently a no-op — the module registers with the
+  system for future use but does no per-frame work today.
+- To disable `WE_SaveManager` entirely: comment out `#define SaveLoadModule` in
+  `Settings/WE_Modules.hpp`. The module's `.cpp` files are not compiled or linked.
 
 ## Documentation Folder:
 Documentation/

@@ -7,8 +7,9 @@
 // ======= Settings ==========
 #include "WolfEngine/Settings/WE_Settings.hpp"
 
-// ======= Low Level Systems ========
+// ======= Registries ========
 #include "WolfEngine/GameObjectSystem/WE_GORegistry.hpp"
+#include "WolfEngine/Modules/WE_ModuleRegistry.hpp"
 
 // ======= SUBSYSTEMS ========
 #include "WolfEngine/Utilities/WE_Timer.hpp"
@@ -26,9 +27,6 @@
 #include "WolfEngine/Graphics/UserInterface/WE_UIManager.hpp"
 #include "WolfEngine/Graphics/ColorPalettes/WE_Palettes.hpp"
 
-// ======= Save/Load System ========
-#include "WolfEngine/SaveLoadSystem/WE_SaveManager.hpp"
-
 
 class WolfEngine final {
 public:
@@ -42,7 +40,6 @@ public:
     UIManager m_UIManager;
     SoundManager m_SoundManager;
     ColliderManager m_ColliderManager;
-    WE_SaveManager  m_saveManager;
 
 private:
     GameObjectRegistry m_GameObjectRegistry = {};
@@ -67,4 +64,3 @@ inline InputManager& Input()                { return WolfEngine::getInstance().m
 inline UIManager& UI()                      { return WolfEngine::getInstance().m_UIManager; }
 inline SoundManager& Sound()                { return WolfEngine::getInstance().m_SoundManager; }
 inline Renderer& RenderSys()                { return WolfEngine::getInstance().m_renderer; }
-inline WE_SaveManager& Save()               { return WolfEngine::getInstance().m_saveManager; }

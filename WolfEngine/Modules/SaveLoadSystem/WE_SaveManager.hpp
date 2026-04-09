@@ -1,10 +1,15 @@
 #pragma once
-#include "WolfEngine/Settings/WE_SaveSettings.hpp"
-#include "WolfEngine/Drivers/EepromDrivers/WE_IEEPROMDriver.hpp"
-#include "WolfEngine/Drivers/EepromDrivers/WE_EEPROM24LC512.hpp"
+#include "WE_SaveSettings.hpp"
 #include "esp_err.h"
 #include <type_traits>
 #include <string.h>
+
+// Module
+#include "WolfEngine/modules/WE_IModule.hpp"
+
+// EEPROM Drivers
+#include "WolfEngine/Drivers/EepromDrivers/WE_IEEPROMDriver.hpp"
+#include "WolfEngine/Drivers/EepromDrivers/WE_EEPROM24LC512.hpp"
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  Custom error codes (esp_err_t compatible)
@@ -76,6 +81,7 @@ constexpr size_t WE_EEPROM_DRIVER_BUF_SIZE = []() constexpr -> size_t {
 //  WE_SaveManager
 // ─────────────────────────────────────────────────────────────────────────────
 class WolfEngine;
+
 
 class WE_SaveManager {
 public:
@@ -191,4 +197,5 @@ private:
         }
         return crc;
     }
+
 };
