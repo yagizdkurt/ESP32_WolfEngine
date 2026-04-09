@@ -4,14 +4,19 @@
 
 class ModuleRegistry {
 public:
-    static void Register(IModule* mod)  { Modules().push_back(mod); }
+    // Insert in descending priority order (highest priority runs first).
+    static void Register(IModule* mod) { 
+        auto& list = Modules();
+        auto it = list.begin();
+        while (it != list.end() && (*it)->GetPriority() >= mod->GetPriority()) ++it;
+        list.insert(it, mod);
+    }
 
     static void InitAll()               { for (auto* mod : Modules()) mod->OnInit(); }
     static void UpdateAll()             { for (auto* mod : Modules()) mod->OnUpdate(); }
     static void ShutdownAll() {
         auto& list = Modules();
-        for (int i = list.size() - 1; i >= 0; i--)
-            list[i]->OnShutdown();
+        for (int i = list.size() - 1; i >= 0; i--) list[i]->OnShutdown();
     }
 
     template<typename T> static T* Get() {
@@ -28,4 +33,9 @@ private:
     }
 };
 
-template<typename T> struct ModuleRegistrar { ModuleRegistrar() { ModuleRegistry::Register(new T()); } };
+template<typename T> struct ModuleRegistrar {
+    ModuleRegistrar() {
+        static T s_instance;
+        ModuleRegistry::Register(&s_instance);
+    }
+};

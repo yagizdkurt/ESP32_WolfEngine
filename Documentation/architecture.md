@@ -10,9 +10,11 @@ For comprehensive documentation intended for human readers, refer to documentati
 WolfEngine is a 2D game engine targeting the **ESP32** (Xtensa LX7).
 Single fixed-timestep busy-wait loop on one FreeRTOS task.
 
-**Allocation policy:** No heap in game-loop code. The one exception is the module system:
-`ModuleRegistrar<T>` calls `new T()` once at startup per module, stored in a `std::vector`
-inside `ModuleRegistry`. All other engine systems use fixed-size arrays.
+**Allocation policy:** No heap in game-loop code. No heap for module instances either:
+`ModuleRegistrar<T>` stores each module as a `static T` local inside its constructor and
+passes a pointer to `ModuleRegistry`. The registry holds those pointers in a `std::vector`
+(the vector's internal buffer is the only heap allocation in the engine). All other engine
+systems use fixed-size arrays.
 
 **Current state:** API not yet stable.
 
@@ -62,41 +64,10 @@ image. There are no processes, no IPC, no network services.
 ### What is intentionally avoided
 
 - **Heap in game loop:** No `new`/`delete` in any per-frame path. All fixed-size arrays.
-  The module system uses `new T()` at startup only — once, before the game loop runs.
+  Module instances are `static` locals inside `ModuleRegistrar<T>` — no heap allocation
+  for module objects. The only heap is the `std::vector` internal buffer in `ModuleRegistry`.
 - **STL containers in engine systems:** `ModuleRegistry` is the sole use of `std::vector`.
   All other engine systems avoid STL for code-size and heap reasons.
-
----
-
-## 5. Entry Points & Bootstrapping
-
-**File:** [src/main.cpp](../main.cpp)
-
-```
-app_main()
-  │
-  ├─ Engine().StartEngine()
-  │     ├─ WEI2C::getInstance().init()
-  │     ├─ WEInputManager::init()
-  │     ├─ DisplayDriver::initialize()
-  │     ├─ WECamera::init()
-  │     ├─ WEUIManager::initialize()
-  │     ├─ WESoundManager::init()
-  │     └─ ModuleRegistry::InitAll()       ← calls OnInit() on all registered modules
-  │           └─ (e.g.) WE_SaveManager::OnInit()  — placement-news EEPROM drivers
-  │
-  ├─ UI().setElements(uiElements[])
-  │
-  └─ Engine().StartGame()
-       └─ gameTick() every ~33 333 µs:
-             1. InputManager::tick()
-             2. ModuleRegistry::UpdateAll()
-             3. GO::componentTick() (all active)
-             4. GO::Update()        (all active)
-             5. ColliderManager::tick()
-             6. Camera::followTick()
-             7. Renderer::render()
-```
 
 ---
 
@@ -367,8 +338,9 @@ from `ExpanderSettings.type` at controller init time.
 static ModuleRegistrar<WE_SaveManager> s_registrar;   // ← runs before main()
 #endif
 ```
-`ModuleRegistrar<T>` constructor calls `ModuleRegistry::Register(new T())`. No edits to
-`WolfEngine.cpp` are required when adding or removing a module.
+`ModuleRegistrar<T>` constructor creates a `static T s_instance` (no heap) and calls
+`ModuleRegistry::Register(&s_instance)`. No edits to `WolfEngine.cpp` are required when
+adding or removing a module.
 
 **Registry API:**
 ```cpp
@@ -422,6 +394,7 @@ esp_err_t eraseAll();                          // erase all chips — never call
 - CRC8 is CRC-8/SMBUS (polynomial 0x07), computed over data bytes only.
 - `write<T>` builds `[header][struct bytes]` on the stack — no heap allocation.
 - `static_assert(std::is_trivially_copyable<T>::value)` rejects structs with vtables or owning pointers at compile time.
+- Do NOT call `write()` or `eraseAll()` during gameplay — writes block for 5–20 ms per 128-byte page. Call only at safe moments (between levels, pause menu, boot). Reads are fast (~1 ms) and can be called at any time. Always access via `ModuleRegistry::Get<WE_SaveManager>()`.
 
 **Compile-time guards (in `WE_SaveManager.hpp`):**
 - `SAVE_SLOTS` count must equal `SAVE_SLOT_COUNT` → catches add/remove mismatch
@@ -435,16 +408,6 @@ esp_err_t eraseAll();                          // erase all chips — never call
 4. Add `case` to the `switch` in `WE_SaveManager::OnInit()`
 
 ---
-
-## 8. Data Layer
-
-| Storage | Technology | Usage |
-|---|---|---|
-| Persistent save data | 24LC512 I²C EEPROM (or other via `WE_IEEPROMDriver`) | Up to 8 chips × 64 KB; accessed exclusively through `WE_SaveManager` |
-| Framebuffer | Static `uint16_t[]` | RGB565, `screenWidth × screenHeight` words |
-
-**EEPROM:** Do NOT call `write()` or `eraseAll()` during gameplay — writes block for 5–20 ms per 128-byte page. Call only at safe moments (between levels, pause menu, boot). Reads are fast (~1 ms) and can be called at any time. Always access via `ModuleRegistry::Get<WE_SaveManager>()`.
-
 
 ## 10. Configuration & Environment
 
@@ -462,27 +425,6 @@ no config files read from flash, and no over-the-air configuration.
 | `WE_RenderSettings.hpp` | Background color (RGB565), game region rect, framebuffer clear flag | Recompile |
 | `WE_Layers.hpp` | `RenderLayer` enum values, `CollisionLayer` bitmask values | Recompile + update all layer assignments |
 | `WE_SaveSettings.hpp` | EEPROM chip list, slot definitions + sizes, integrity flag, magic/version constants | Recompile |
-
-### Feature flags
-
-**Display target** (in `WE_Settings.hpp`, one at a time):
-
-| Flag | Effect |
-|---|---|
-| `DISPLAY_ST7735` | Selects ST7735 display driver |
-| `DISPLAY_CUSTOM` | Use a custom display driver |
-
-**Module flags** (in `WE_Modules.hpp`):
-
-| Flag | Module |
-|---|---|
-| `SaveLoadModule` | `WE_SaveManager` — I²C EEPROM save/load |
-
-**Per-file debug:**
-
-| Flag | Effect |
-|---|---|
-| `MODULE_DEBUG_ENABLED` | Enables `DebugLog`/`DebugErr` in that translation unit |
 
 ---
 

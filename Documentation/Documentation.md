@@ -46,7 +46,7 @@ Repository structure is in Structure.md for convenience to maintainers. You can 
 | Placement new | `WEController` for expander objects; `WE_SaveManager` for EEPROM drivers | Avoids heap; driver constructed in a `uint8_t` buffer sized to the largest concrete type |
 | Constexpr validation | `Sprite::Create()`, `WE_SaveManager` slot guards | Illegal values caught at compile time, not runtime |
 
-- **Heap allocation:** The core game loop and ECS use no dynamic allocation (fixed-size arrays throughout). The module system is the one exception: `ModuleRegistrar<T>` calls `new T()` once at startup to create each module, and `ModuleRegistry` holds them in a `std::vector`. This is intentional — modules are long-lived singletons allocated once before the game loop begins.
+- **Heap allocation:** The core game loop, Modules and ECS use no dynamic allocation (fixed-size arrays throughout).
 - **STL containers:** `ModuleRegistry` uses `std::vector<IModule*>` (module list only). All other engine systems avoid STL for code-size and heap reasons.
 
 ---
@@ -57,22 +57,14 @@ Repository structure is in Structure.md for convenience to maintainers. You can 
 app_main()
   │
   ├─ Engine().StartEngine()
-  │     ├─ WEI2C::getInstance().init()          // I²C bus @ 400 kHz
-  │     ├─ WEInputManager::init()               // GPIO config for all controllers + ADC
-  │     ├─ DisplayDriver::initialize()           // SPI bus, ST7735 reset, init sequence
-  │     ├─ WECamera::init()                     // Sets game region, default zoom
-  │     ├─ WEUIManager::initialize()            // Clears element list
-  │     ├─ WESoundManager::init()               // LEDC timer + channels for music/SFX pins
-  │     └─ ModuleRegistry::InitAll()            // calls OnInit() on every registered module
-  │           └─ (e.g.) WE_SaveManager::OnInit()  // placement-news EEPROM driver(s)
+  │     ├─ Driver initialization
+  │     ├─ Engine CORE subsystem initialization
+  │     ├─ Engine Modules initialization
+  │     └─ UI().setElements(uiElements[])
   │
-  ├─ UI().setElements(uiElements[])             // Register null-terminated UI element array
-  │
-  └─ Engine().StartGame()                       // → main loop (see §7 Flow A)
+  └─ Engine().StartGame()
+      └─ gameTick()
 ```
-
-To invoke: flash the firmware via PlatformIO. `app_main` is called by the FreeRTOS
-scheduler after the ESP-IDF startup sequence.
 
 ---
 
@@ -406,7 +398,7 @@ T* ModuleRegistry::Get<T>();          // retrieve a module by type at runtime
 // In your module's .cpp file:
 static ModuleRegistrar<MyModule> s_registrar;
 ```
-When the translation unit is loaded, `s_registrar`'s constructor runs `ModuleRegistry::Register(new MyModule())`. No changes to `WolfEngine.cpp` are needed.
+When the translation unit is loaded, `s_registrar`'s constructor creates a `static T s_instance` (no heap allocation) and calls `ModuleRegistry::Register(&s_instance)`. No changes to `WolfEngine.cpp` are needed.
 
 **Adding a new module — step by step:**
 1. Create your class inheriting `IModule` (implement `GetName()`, `GetPriority()`, and whichever hooks you need).
