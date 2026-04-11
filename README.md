@@ -18,12 +18,16 @@ Built with PlatformIO and ESP-IDF. No Unity. No Godot. Just you, your ESP32, and
 - 🎨 **Palette system** — 5 built-in palettes (Grayscale, Warm, Cool, GameBoy, Sunset), each with 31 usable colors. Swap palettes at runtime for damage flash, color variants, day/night effects — it's just a pointer swap. Custom palettes are supported!
 - 🕹️ **Input & Multiplayer** — up to 4 simultaneous local controllers, each independently configured with its own buttons, joystick, and I2C expander. Buttons via direct GPIO or expanders (PCF8574, PCF8575, MCP23017), analog joystick with calibration and dead zone, software debouncing built in.
 - 🔊 **Sound** — supports 2 seperate buzzers for music and sfx. Has note system built in. Using PWM to generate 8bit style musics and sfx. Looping and callbacks included!
-- 💾 Save/Load System (EEPROM) — flexible EEPROM-backed persistence with support for custom partition tables. Define your own data layouts using structs, and let the SaveLoadManager handle serialization and deserialization automatically. Designed for predictable memory usage and fast access, with full control over how and where your data is stored.
+- 💾 Save/Load System (EEPROM) — More info at modules section.
 - 📷 **Camera** — smooth follow targeting, configurable follow speed, zoom, and world↔screen coordinate conversion. Sprites outside the visible area are culled before drawing.
 - 🖥️ **UI system** — text labels anchored to a dedicated UI region at the bottom of the screen. Dirty-flag system means the UI region is only redrawn and flushed when something actually changes.
 - ⚡ **Partial screen flush** — when the UI hasn't changed, only the game region is sent over SPI. Less data, faster frames.
 - 🔌 **Custom display driver** — built-in ST7735 support out of the box, but the renderer talks to a `DisplayDriver` interface. Swap in your own driver for any display you like.
 - 🧠 **Flash-friendly memory model** — sprite pixel data and palettes live in flash as `constexpr` arrays. Zero RAM cost for graphics data.
+- 🧩 **Module System** — optional engine subsystems you opt into at compile time. Pay only for what you use.
+
+## 🧩 Current Modules
+- 💾 Save/Load System (EEPROM) — flexible EEPROM-backed persistence with support for custom partition tables. Define your own data layouts using structs, and let the SaveLoadManager handle serialization and deserialization automatically. Designed for predictable memory usage and fast access, with full control over how and where your data is stored.
 
 ---
 
