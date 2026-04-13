@@ -26,7 +26,7 @@ void WolfEngine::StartGame() {
     int64_t lastFrameTime = esp_timer_get_time();
     for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj) obj->callStart();
 
-    while (true) {
+    while (IsRunning()) {
         int64_t now     = esp_timer_get_time();
         int64_t elapsed = now - lastFrameTime;
 

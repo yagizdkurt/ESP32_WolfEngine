@@ -1,4 +1,5 @@
 #pragma once
+#include <atomic>
 //============================================================================================
 //                        WOLF ENGINE CORE HEADER FILE
 //============================================================================================
@@ -38,10 +39,20 @@ public:
     void StartEngine();
 
     /**
-     * @brief Starts the game loop. Blocks indefinitely — never returns.
+     * @brief Starts the game loop. Blocks until RequestQuit() is called.
      * @note Must be called after StartEngine().
      */
     void StartGame();
+
+    /**
+     * @brief Signals the game loop to exit. Safe to call from any thread.
+     */
+    void RequestQuit() { m_isRunning.store(false, std::memory_order_relaxed); }
+
+    /**
+     * @brief Returns true while the game loop is running. Safe to call from any thread.
+     */
+    bool IsRunning() { return m_isRunning.load(std::memory_order_relaxed); }
     
     Renderer m_renderer;
     Camera m_Camera;
@@ -51,8 +62,9 @@ public:
     ColliderManager m_ColliderManager;
 
 private:
+    std::atomic<bool> m_isRunning{false};
     GameObjectRegistry m_GameObjectRegistry = {};
-    bool m_isRunning = false;
+    
     void gameTick();
     WolfEngine() :
     m_renderer(GetDriver()),

@@ -38,13 +38,13 @@ file(GLOB_RECURSE ENGINE_SRCS CONFIGURE_DEPENDS
 )
 
 # Exclude the ST7735 driver — it owns GetDriver() and has unresolvable
-# ESP-LCD / SPI / FreeRTOS dependencies. Our WE_Display_SDL2.cpp replaces it.
+# ESP-LCD / SPI / FreeRTOS dependencies. Our stubs/WE_Display_SDL3.cpp replaces it.
 list(FILTER ENGINE_SRCS EXCLUDE REGEX "WE_Display_ST7735\\.cpp$")
 
 # ── Executable ────────────────────────────────────────────────────────────────
 add_executable(WolfEngine_Desktop
     main_desktop.cpp
-    WE_Display_SDL2.cpp
+    stubs/WE_Display_SDL3.cpp
     ${ENGINE_SRCS}
 )
 
