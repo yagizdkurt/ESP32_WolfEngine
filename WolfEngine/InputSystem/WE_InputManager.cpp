@@ -2,7 +2,14 @@
 #include "esp_timer.h"
 #include "driver/gpio.h"
 
+#ifdef WE_PLATFORM_SDL
+#include "Input_SDL.h"
+#endif
+
 Controller* InputManager::getController(int index) {
+#ifdef WE_PLATFORM_SDL
+    if (index == 0) return &m_controllers[0];
+#endif
     if (index < 0 || index >= MAX_CONTROLLERS) return nullptr;
     if (!INPUT_SETTINGS.controllers[index].enabled) return nullptr;
     return &m_controllers[index];
@@ -78,6 +85,10 @@ void InputManager::init() {
 }
 
 void InputManager::tick() {
+#ifdef WE_PLATFORM_SDL
+    Controller* c0 = getController(0);
+    if (c0) SDLInput_flush(*c0);
+#else
     int64_t now         = esp_timer_get_time();
     int64_t debounceUs  = static_cast<int64_t>(INPUT_SETTINGS.debounceMs) * 1000LL;
 
@@ -85,4 +96,5 @@ void InputManager::tick() {
         if (!INPUT_SETTINGS.controllers[c].enabled) continue;
         m_controllers[c].tick(now, debounceUs);
     }
+#endif
 }

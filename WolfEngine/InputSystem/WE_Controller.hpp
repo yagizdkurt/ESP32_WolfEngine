@@ -33,6 +33,13 @@ public:
     // Returns 0.0 if axis is disabled or inside dead zone.
     float getAxis(JoyAxis axis) const;
 
+    // Bypass hardware polling and directly set button/axis state.
+    // Must be called every frame for every button so m_prevState stays
+    // in sync for getButtonDown() / getButtonUp() edge detection.
+    void simulateButton(Button btn, bool pressed);
+    void simulateJoystick(JoyAxis axis, float value);
+
+
 private:
     const ControllerSettings* m_settings = nullptr;
 
@@ -56,10 +63,7 @@ private:
     // ── Internal ───────────────────────────────────────────────
     bool  readRaw(Button btn) const;
     float normalizeAxis(int raw, int centre, int minVal, int maxVal) const;
-
     void init(const ControllerSettings& settings, adc_oneshot_unit_handle_t adcHandle, int64_t now);
-
     void tick(int64_t now, int64_t debounceUs);
-
     friend class InputManager;
 };

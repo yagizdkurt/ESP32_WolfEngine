@@ -159,3 +159,16 @@ bool Controller::getButtonUp(Button btn) const {
 float Controller::getAxis(JoyAxis axis) const {
     return (axis == JoyAxis::X) ? m_axisX : m_axisY;
 }
+
+void Controller::simulateButton(Button btn, bool pressed) {
+    int i = static_cast<int>(btn);
+    m_prevState[i] = m_currState[i];
+    m_currState[i] = pressed;
+}
+
+void Controller::simulateJoystick(JoyAxis axis, float value) {
+    if (value >  1.0f) value =  1.0f;
+    if (value < -1.0f) value = -1.0f;
+    if (axis == JoyAxis::X) m_axisX = value;
+    else                    m_axisY = value;
+}

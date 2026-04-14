@@ -22,7 +22,9 @@ list(FILTER ENGINE_SRCS EXCLUDE REGEX "WE_Display_ST7735\\.cpp$")
 # ── Executable ────────────────────────────────────────────────────────────────
 add_executable(WolfEngine_Desktop
     main_desktop.cpp
+    WE_SDLManager.cpp
     stubs/WE_Display_SDL3.cpp
+    WE_SDLInputDriver.cpp
     ${ENGINE_SRCS}
 )
 
@@ -31,6 +33,7 @@ add_executable(WolfEngine_Desktop
 # the real ones (or satisfy includes on a host that has no ESP-IDF at all).
 target_include_directories(WolfEngine_Desktop PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/stubs"                        # fake ESP-IDF headers
+    "${CMAKE_CURRENT_SOURCE_DIR}"                              # desktop-specific headers (WE_SDLInputDriver.hpp etc.)
     "${CMAKE_CURRENT_SOURCE_DIR}/.."                           # engine root (WolfEngine/ includes)
     "${CMAKE_CURRENT_SOURCE_DIR}/../WolfEngine/Settings"       # relative includes inside WE_Settings.hpp
     ${SDL3_INCLUDE_DIRS}
@@ -40,6 +43,7 @@ target_include_directories(WolfEngine_Desktop PRIVATE
 target_compile_definitions(WolfEngine_Desktop PRIVATE
     WE_DESKTOP_BUILD=1
     DISPLAY_SDL
+    WE_PLATFORM_SDL
 )
 
 # ── Link ──────────────────────────────────────────────────────────────────────

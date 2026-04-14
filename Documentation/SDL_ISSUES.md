@@ -236,3 +236,108 @@ backend, `SDL_Init` must also receive `SDL_INIT_AUDIO`. This is a known deferred
 that may be overlooked when Phase 5 work begins.
 
 ---
+
+## Controller 0 Only
+
+**Status:** Active
+**Phase found:** Phase 3
+**Phase to fix:** TBD
+**Severity:** Medium
+**Location:** `src/desktop/WE_SDLInputDriver.cpp` — `SDLInputDriver::flush()`
+**What it does now:** Only controller 0 receives SDL input. Controllers 1–3 always
+report no input on desktop.
+**Impact:** Multi-player games cannot be tested on desktop. Missing input on controllers
+1–3 is silent — no error or warning is produced.
+**Maintenance note:** Any future multi-player feature will need a keyboard split scheme
+or gamepad support added to `SDLInputDriver` before it can be tested on desktop.
+
+---
+
+## getController(0) Always Returns Non-Null on SDL
+
+**Status:** Active
+**Phase found:** Phase 3
+**Phase to fix:** TBD
+**Severity:** Low
+**Location:** `src/WolfEngine/InputSystem/WE_InputManager.cpp` — `getController()`
+**What it does now:** The `enabled` flag in `ControllerSettings` is ignored for index 0
+on desktop. An SDL-specific early-return bypasses the enabled check entirely.
+**Impact:** Behaviour diverges silently from ESP32 — code that disables controller 0 in
+settings will still receive input on desktop. Intentional design decision, but could
+mask misconfigured settings during development.
+**Maintenance note:** If `getController()` logic is ever refactored, preserve the SDL
+early-return for index 0 or document the removal explicitly.
+
+---
+
+## Keyboard-Only Joystick — No Analog Range
+
+**Status:** Active
+**Phase found:** Phase 3
+**Phase to fix:** TBD
+**Severity:** Medium
+**Location:** `src/desktop/WE_SDLInputDriver.cpp` — `SDLInputDriver::flush()`
+**What it does now:** Joystick axes are driven by WASD keys and can only output discrete
+values: `-1.0`, `0.0`, or `+1.0`. No analog ramp. Diagonal input produces `(1.0, -1.0)`.
+**Impact:** Any game logic that depends on analog axis values between `-1.0` and `1.0`
+(acceleration curves, variable speed, analog aiming) cannot be tested on desktop. The
+behaviour difference is visible and expected, not silent.
+**Maintenance note:** USB gamepad support via SDL's joystick/gamepad API would resolve
+this. Track as a future improvement if analog testing becomes necessary.
+
+---
+
+## Debounce Bypassed on Desktop
+
+**Status:** Active
+**Phase found:** Phase 3
+**Phase to fix:** TBD
+**Severity:** Low
+**Location:** `src/WolfEngine/InputSystem/WE_Controller.cpp` — `simulateButton()`
+**What it does now:** `simulateButton` writes directly to `m_currState` / `m_prevState`.
+The debounce window in `InputSettings::debounceMs` has no effect on desktop.
+**Impact:** Input that relies on debounce timing behaving identically to hardware will
+not be reproducible on desktop. In practice this is unlikely to matter for game logic,
+but hardware-specific timing tests are invalid on desktop.
+**Maintenance note:** Key repeat events from the OS are already filtered via the atomic
+bitmask (set on first down, cleared on up), so spurious `getButtonDown` firings are not
+a concern.
+
+---
+
+## Controller::tick() Not Called on SDL
+
+**Status:** Active
+**Phase found:** Phase 3
+**Phase to fix:** TBD
+**Severity:** Medium
+**Location:** `src/WolfEngine/InputSystem/WE_InputManager.cpp` — `InputManager::tick()`
+**What it does now:** The GPIO/ADC polling path is entirely skipped on desktop.
+`InputManager::tick()` calls `SDLInput_flush` instead of the normal `Controller::tick()`
+loop.
+**Impact:** Any per-frame side-effects added to `Controller::tick()` in the future will
+silently not run on desktop unless an explicit SDL-path equivalent is added to
+`WE_SDLInputDriver.cpp`.
+**Maintenance note:** Every time `Controller::tick()` gains new responsibilities, assess
+whether the SDL path needs a matching update. This is a recurring maintenance risk as
+the engine grows.
+
+---
+
+## Key Repeat Events Ignored
+
+**Status:** Active
+**Phase found:** Phase 3
+**Phase to fix:** TBD
+**Severity:** Low
+**Location:** `src/desktop/WE_SDLInputDriver.cpp` — `SDLInputDriver::processEvent()`
+**What it does now:** SDL fires repeated `SDL_EVENT_KEY_DOWN` events while a key is held
+(OS key-repeat). The driver ignores these — state is stored as a bitmask set on first
+down and cleared on up, so repeat events are no-ops.
+**Impact:** No phantom button presses. Intentional behaviour, but means OS key-repeat
+cannot be used as an input mechanism if ever needed (e.g. menu navigation auto-repeat).
+**Maintenance note:** If menu or UI systems want to leverage key-repeat for held
+navigation, a separate repeat counter would need to be added to `SDLInputDriver` rather
+than relying on OS events.
+
+---
