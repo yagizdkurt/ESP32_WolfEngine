@@ -1,5 +1,8 @@
 #include "WE_SDLManager.hpp"
 #include "stubs/WE_Display_SDL3.hpp"
+// WE_SDLInputDriver.hpp is included here for pollEvents().
+// SDLInputDriver is injected into InputManager separately in main_desktop.cpp
+// after StartEngine() — SDLManager does not own the provider lifetime.
 #include "WE_SDLInputDriver.hpp"
 #include <cstdio>
 #include "WolfEngine/WolfEngine.hpp"

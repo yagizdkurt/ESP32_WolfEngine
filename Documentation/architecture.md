@@ -53,7 +53,7 @@ image. There are no processes, no IPC, no network services.
 | Static module system with priority dispatch | `ModuleSystem`, `WE_ModuleSystem.cpp`, `WE_Modules.hpp` | Optional subsystems are listed in `WE_ModuleSystem.cpp` under `#if defined()` guards; `ModuleSystem::InitAll()` insertion-sorts by `Priority` (descending) then calls `OnInit()` on each |
 | Entity-Component System | `GameObjectSystem` + `ComponentSystem` | Lightweight: no archetype tables, no dynamic dispatch via vtable arrays — components are owned by the GO and ticked via direct method calls |
 | Factory method | `GameObject::Create<T>()`, `Collider::Box()`, `Collider::Circle()`, `Sprite::Create()` | Hides construction details; `Create<T>` placement-news into a registry slot |
-| Abstract interface | `WE_Display_Driver`, `WE_IExpander`, `WE_IEEPROMDriver` | Lets driver selection be a compile-time `#if` in settings or a runtime enum dispatch |
+| Abstract interface | `WE_Display_Driver`, `WE_IExpander`, `WE_IEEPROMDriver`, `WE_IInputProvider` | Lets driver selection be a compile-time `#if` in settings or a runtime enum dispatch; `IInputProvider` is injected at runtime via `setInputProvider()` |
 | Dirty flag | `WEUIManager`, `BaseUIElement` | UI skips redraw when nothing has changed |
 | Triangular bitmask | `WEColliderManager` | Tracks per-pair collision state in O(n²/2) bits without a hash map |
 | Placement new | `WEController` for expander objects; `WE_SaveManager` for EEPROM driver objects | Avoids heap; concrete driver constructed into a `uint8_t` buffer sized to the largest concrete type |
@@ -196,24 +196,33 @@ void check();                      // called once per frame by game loop
 
 **Public interface:**
 ```cpp
-WEInputManager& Input();                 // global accessor
-WEController& getController(uint8_t i);  // 0–3
+InputManager& Input();                   // global accessor
+Controller* getController(int i);        // 0–3; returns nullptr if disabled
 
-// On WEController:
+// Platform injection (call after StartEngine(), before StartGame()):
+void setInputProvider(IInputProvider* provider);  // nullptr = hardware GPIO/ADC path
+void setAlwaysEnableController0(bool value);      // bypass enabled check for controller 0
+
+// On Controller:
 bool getButton(Button b);       // held
 bool getButtonDown(Button b);   // pressed this frame
 bool getButtonUp(Button b);     // released this frame
-float getAxis(Axis a);          // -1.0 to 1.0
+float getAxis(JoyAxis a);       // -1.0 to 1.0
 ```
 
 **Key design choices:**
 - Each controller is configured entirely by `ControllerSettings` in `WE_InputSettings.hpp`
   — no code changes needed to remap buttons.
-- Expander objects are placement-newed into a fixed buffer inside `WEController`;
+- Expander objects are placement-newed into a fixed buffer inside `Controller`;
   type is selected at runtime from `ExpanderType` enum.
 - Debounce per-button via timestamp; poll interval is configurable.
 - ADC joystick: raw reading normalised against calibration min/mid/max values defined
   in settings.
+- `IInputProvider` interface allows any platform to override the hardware polling path
+  without touching engine source. `setInputProvider()` stores a raw pointer; the caller
+  owns the lifetime. `nullptr` restores the hardware path.
+- `setInputProvider()` and `setAlwaysEnableController0()` are intentionally separate —
+  a provider does not imply that controller 0 must bypass the enabled check.
 
 
 ---

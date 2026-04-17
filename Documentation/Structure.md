@@ -60,6 +60,7 @@ WolfEngine/
 │
 ├── InputSystem/
 │   ├── WE_InputManager.hpp / .cpp  # Owns all Controller instances; shared ADC handle; tick() per frame
+│   ├── WE_IInputProvider.hpp       # Abstract input provider interface; implement to override hardware polling
 │   └── WE_Controller.hpp / .cpp    # Single physical controller: GPIO/expander polling, debounce, ADC joystick
 │
 ├── Physics/
@@ -136,7 +137,7 @@ desktop/
 ├── build/                          # CMake build artifacts (not tracked)
 └── stubs/                          # ESP-IDF API stubs — let WolfEngine compile on desktop
     ├── WE_Display_SDL3.hpp / .cpp
-    ├── Display_SDL.h / Input_SDL.h
+    ├── Display_SDL.h
     ├── esp_err.h / esp_log.h / esp_timer.h
     ├── driver/gpio.h / i2c.h / ledc.h
     ├── esp_adc/adc_oneshot.h

@@ -253,22 +253,6 @@ or gamepad support added to `SDLInputDriver` before it can be tested on desktop.
 
 ---
 
-## getController(0) Always Returns Non-Null on SDL
-
-**Status:** Active
-**Phase found:** Phase 3
-**Phase to fix:** TBD
-**Severity:** Low
-**Location:** `src/WolfEngine/InputSystem/WE_InputManager.cpp` — `getController()`
-**What it does now:** The `enabled` flag in `ControllerSettings` is ignored for index 0
-on desktop. An SDL-specific early-return bypasses the enabled check entirely.
-**Impact:** Behaviour diverges silently from ESP32 — code that disables controller 0 in
-settings will still receive input on desktop. Intentional design decision, but could
-mask misconfigured settings during development.
-**Maintenance note:** If `getController()` logic is ever refactored, preserve the SDL
-early-return for index 0 or document the removal explicitly.
-
----
 
 ## Keyboard-Only Joystick — No Analog Range
 
@@ -305,22 +289,22 @@ a concern.
 
 ---
 
-## Controller::tick() Not Called on SDL
+## Controller::tick() Not Called When an Input Provider Is Active
 
 **Status:** Active
 **Phase found:** Phase 3
 **Phase to fix:** TBD
 **Severity:** Medium
 **Location:** `src/WolfEngine/InputSystem/WE_InputManager.cpp` — `InputManager::tick()`
-**What it does now:** The GPIO/ADC polling path is entirely skipped on desktop.
-`InputManager::tick()` calls `SDLInput_flush` instead of the normal `Controller::tick()`
-loop.
+**What it does now:** The GPIO/ADC polling path is entirely skipped when an `IInputProvider`
+is active. `InputManager::tick()` calls `m_inputProvider->flush()` and returns early;
+`Controller::tick()` never runs.
 **Impact:** Any per-frame side-effects added to `Controller::tick()` in the future will
-silently not run on desktop unless an explicit SDL-path equivalent is added to
-`WE_SDLInputDriver.cpp`.
+silently not run on any platform using an input provider, unless an explicit equivalent is
+added to the provider's `flush()` implementation.
 **Maintenance note:** Every time `Controller::tick()` gains new responsibilities, assess
-whether the SDL path needs a matching update. This is a recurring maintenance risk as
-the engine grows.
+whether active input providers need a matching update. This is a recurring maintenance risk
+as the engine grows.
 
 ---
 

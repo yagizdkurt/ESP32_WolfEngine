@@ -1,4 +1,3 @@
-#ifdef WE_PLATFORM_SDL
 #include "WE_SDLInputDriver.hpp"
 
 // ── Static member definitions ─────────────────────────────────
@@ -57,7 +56,10 @@ void SDLInputDriver::processEvent(const SDL_Event& e) {
 //  flush — engine thread (called every frame)
 // ─────────────────────────────────────────────────────────────
 
-void SDLInputDriver::flush(Controller& c) {
+void SDLInputDriver::flush(Controller* controllers, int count) {
+    if (count < 1) return;
+    Controller& c = controllers[0];  // SDL drives controller 0 only — see SDL_ISSUES.md
+
     // Push button state for every button so prevState stays in sync.
     uint32_t btns = s_buttons.load(std::memory_order_relaxed);
     for (int i = 0; i < 10; i++)
@@ -73,11 +75,3 @@ void SDLInputDriver::flush(Controller& c) {
     c.simulateJoystick(JoyAxis::X, x);
     c.simulateJoystick(JoyAxis::Y, y);
 }
-
-// ─────────────────────────────────────────────────────────────
-//  SDLInput_flush — free function declared in stubs/Input_SDL.h,
-//  called by InputManager::tick() on the SDL platform.
-// ─────────────────────────────────────────────────────────────
-void SDLInput_flush(Controller& c) { SDLInputDriver::flush(c); }
-
-#endif // WE_PLATFORM_SDL

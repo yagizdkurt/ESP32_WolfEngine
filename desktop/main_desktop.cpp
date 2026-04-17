@@ -12,6 +12,7 @@
 #include <thread>
 #include "WolfEngine/WolfEngine.hpp"
 #include "WE_SDLManager.hpp"
+#include "WE_SDLInputDriver.hpp"
 
 int main(int, char*[]) {
     SDLManager sdl;
@@ -24,6 +25,13 @@ int main(int, char*[]) {
     ) return 1;
 
     Engine().StartEngine();
+
+    // static — must outlive the engine. InputManager holds a raw pointer to this
+    // and calls flush() every frame. A non-static local would be destroyed before
+    // the engine thread stops, causing undefined behaviour.
+    static SDLInputDriver inputDriver;
+    Input().setInputProvider(&inputDriver);
+    Input().setAlwaysEnableController0(true);  // explicit — desktop always has controller 0
 
     // Game Logic Here:
 

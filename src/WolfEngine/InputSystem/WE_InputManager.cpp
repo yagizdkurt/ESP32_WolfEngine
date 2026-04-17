@@ -1,16 +1,18 @@
 #include "WolfEngine/InputSystem/WE_InputManager.hpp"
+#include "WolfEngine/InputSystem/WE_IInputProvider.hpp"
 #include "esp_timer.h"
 #include "driver/gpio.h"
+#include <cassert>
 
-#ifdef WE_PLATFORM_SDL
-#include "Input_SDL.h"
-#endif
+void InputManager::setInputProvider(IInputProvider* provider) { m_inputProvider = provider; }
+void InputManager::setAlwaysEnableController0(bool value) { m_alwaysEnableController0 = value; }
 
+// setInputProvider and setAlwaysEnableController0 are intentionally separate.
+// A future provider (e.g. replay system) may not require controller 0 to bypass
+// the enabled check. The two concerns must remain independently controllable.
 Controller* InputManager::getController(int index) {
-#ifdef WE_PLATFORM_SDL
-    if (index == 0) return &m_controllers[0];
-#endif
-    if (index < 0 || index >= MAX_CONTROLLERS) return nullptr;
+    assert(index >= 0 && index < MAX_CONTROLLERS && "getController: index out of range");
+    if (m_alwaysEnableController0 && index == 0) return &m_controllers[0];
     if (!INPUT_SETTINGS.controllers[index].enabled) return nullptr;
     return &m_controllers[index];
 }
@@ -85,16 +87,15 @@ void InputManager::init() {
 }
 
 void InputManager::tick() {
-#ifdef WE_PLATFORM_SDL
-    Controller* c0 = getController(0);
-    if (c0) SDLInput_flush(*c0);
-#else
-    int64_t now         = esp_timer_get_time();
-    int64_t debounceUs  = static_cast<int64_t>(INPUT_SETTINGS.debounceMs) * 1000LL;
+    if (m_inputProvider) {
+        m_inputProvider->flush(m_controllers, MAX_CONTROLLERS);
+        return;
+    }
+    int64_t now        = esp_timer_get_time();
+    int64_t debounceUs = static_cast<int64_t>(INPUT_SETTINGS.debounceMs) * 1000LL;
 
     for (int c = 0; c < MAX_CONTROLLERS; c++) {
         if (!INPUT_SETTINGS.controllers[c].enabled) continue;
         m_controllers[c].tick(now, debounceUs);
     }
-#endif
 }
