@@ -29,7 +29,8 @@ bool SDLManager::init(const SDLManagerConfig& config) {
 
     // Set up logical presentation with letterboxing to maintain aspect ratio.
     SDL_SetRenderLogicalPresentation( renderer, config.logicalWidth, config.logicalHeight, SDL_LOGICAL_PRESENTATION_LETTERBOX );
-
+    // Apply brightness scaling to renderer (affects all rendering operations, including the display driver texture).
+    SDL_SetRenderColorScale(renderer, config.brightness);
     // Pass the renderer to the display driver so it can create its texture.
     GetSDLDriver().setRenderer(renderer);
     return true;

@@ -6,6 +6,7 @@ struct SDLManagerConfig {
     int         logicalWidth  = 128;
     int         logicalHeight = 160;
     int         scale         = 4;
+    float       brightness    = 1.5f;
 };
 
 class SDLManager {

@@ -1,3 +1,4 @@
+#include "testgameobject.hpp"
 // Desktop entry point.
 //
 // Mirrors app_main() from src/main.cpp:
@@ -15,14 +16,20 @@
 
 int main(int, char*[]) {
     SDLManager sdl;
-    if (!sdl.init({ .title         = "WolfEngine Desktop",
-                    .logicalWidth  = 128,
-                    .logicalHeight = 160,
-                    .scale         = 4 })) return 1;
+    if (!sdl.init({ 
+        .title = "WolfEngine Desktop", 
+        .logicalWidth  = 128,
+        .logicalHeight = 160,
+        .scale = 4,
+        .brightness = 3.0f })
+    ) return 1;
 
     Engine().StartEngine();
-    std::thread engineThread([] { Engine().StartGame(); });
 
+    // Game Logic Here:
+    GameObject::Create<TestGameObject>();
+
+    std::thread engineThread([] { Engine().StartGame(); });
     while (sdl.pollEvents()) {}
 
     Engine().RequestQuit();
