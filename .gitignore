@@ -8,6 +8,7 @@
 !README.md
 !platformio.ini
 !cxx_only_flags.py
+!mkdocs.yml
 
 # ProjectFolders
 !IconsPhotosEtc/
@@ -18,6 +19,8 @@
 !Documentation/**
 !desktop/
 !desktop/**
+!.github/
+!.github/**
 
 # PlatformIO Special Folders
 !test/
