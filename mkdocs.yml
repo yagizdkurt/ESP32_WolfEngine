@@ -1,0 +1,66 @@
+site_name: WolfEngine Wiki
+docs_dir: documentation/wiki
+ 
+theme:
+  name: material
+  custom_dir: documentation/wiki/overrides
+  features:
+    - navigation.expand
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - navigation.top       # back-to-top button when scrolling up
+    - navigation.footer    # prev/next page buttons at the bottom
+    - content.tooltips     # hover tooltips on links
+  palette:
+    - scheme: slate        # dark
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default      # light
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  font:
+    text: Roboto
+    code: JetBrains Mono
+  logo: assets/icon.png
+  favicon: assets/icon.png
+ 
+nav:
+  - Home: index.md
+  - 🚀 Getting Started:
+    - ⚙️ Installation & Setup: getting-started/installation-and-setup.md
+    - 🎮 First GameObject: getting-started/first-gameobject.md
+  - 🔧 Core Systems:
+    - 🏠 Engine: core-systems/engine.md
+    - 🕹️ Input: core-systems/input.md
+    - 📷 Camera: core-systems/camera.md
+    - 🔊 Audio: core-systems/audio.md
+    - 🕐 Time & Timer: core-systems/time-and-timer.md
+  - ⚙️ Modules:
+    - 💾 Save/Load: modules/save-load.md
+  - 🧩 GameObjects & Components:
+    - 🧱 GameObject: gameobjects-and-components/gameobject.md
+    - 📐 Transform: gameobjects-and-components/transform.md
+    - 🖼️ Sprite Renderer: gameobjects-and-components/sprite-renderer.md
+    - 🎬 Animator: gameobjects-and-components/animator.md
+  - 🎨 Graphics:
+    - ⚡ Renderer: graphics/renderer.md
+    - 🗂️ How To Setup Graphics: graphics/how-to-setup-graphics.md
+    - 🎨 Palette: graphics/palette.md
+    - ✏️ How To Create Good Sprites: graphics/how-to-create-good-sprites.md
+    - 🟥 Direct Accessing The Buffer: graphics/buffer.md
+  - 🖥️ UI System:
+    - 🗂️ UI Manager: ui-system/ui-manager.md
+    - 📑 UI Panel: ui-system/ui-panel.md
+    - 🏷️ UI Label Element: ui-system/ui-label-element.md
+    - ✏️ Custom UI Elements: ui-system/custom-ui-elements.md
+  - ⚙️ Engine Settings:
+    - 🔩 Settings: engine-settings/settings.md
+    - 📌 Pin Definitions: engine-settings/pin-definitions.md
+    - 🗃️ Layers: engine-settings/layers.md
+    - 🎛️ Input Settings: engine-settings/input-settings.md
+  - 🔌 Interfaces:
+    - 💿 EEPROM: interfaces/eeprom.md
+    - 🔲 PCF Expander: interfaces/pcf-expander.md

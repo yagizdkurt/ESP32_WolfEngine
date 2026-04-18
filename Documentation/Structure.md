@@ -60,6 +60,7 @@ WolfEngine/
 │
 ├── InputSystem/
 │   ├── WE_InputManager.hpp / .cpp  # Owns all Controller instances; shared ADC handle; tick() per frame
+│   ├── WE_IInputProvider.hpp       # Abstract input provider interface; implement to override hardware polling
 │   └── WE_Controller.hpp / .cpp    # Single physical controller: GPIO/expander polling, debounce, ADC joystick
 │
 ├── Physics/
@@ -98,7 +99,12 @@ WolfEngine/
     ├── WE_Timer.hpp / .cpp        # Timer struct wrapping WETime; start/stop/reset/check
     ├── WE_Vector2d.hpp            # Vec2 (float) + IntVec2; full operator set; lerp, dist, fromAngle
     └── WE_Debug.h                 # DebugLog/DebugErr macros → ESP_LOGI/LOGE; no-op when disabled
-    
+
+GameCode
+└── Your actual code for game development
+
+Main.cpp ── Entry point
+
 ```
 
 **Non-obvious notes:**
@@ -107,15 +113,38 @@ WolfEngine/
 -
 
 ## Documentation Folder:
+```
 Documentation/
 │
-├── architecture.md      # AI-oriented context: architecture, design decisions, constraints, patterns
-│
-├── documentation.md     # Human-readable documentation: system overview, modules, usage, examples
-│
-├── issues.md            # Known issues, limitations, TODOs, and technical debt tracking
-│
-└── structure.md         # Project structure reference (mirrors src layout and explains organization)
+├── AI_Documentation.md  # AI-oriented context: architecture, design decisions, constraints, patterns
+├── Documentation.md     # Human-readable documentation: system overview, modules, usage, examples
+├── Structure.md         # Project structure reference (this file)
+├── KNOWN_ISSUES.md      # Active known issues and current limitations
+├── SOLVED_ISSUES.md     # Resolved issues archive
+└── SDL_ISSUES.md        # Desktop/SDL-specific issues and workarounds
+```
 
-## Non Source Folders:
-- IconsPhotosEtx: Unneccessary stuff for development.
+## Desktop Folder:
+```
+desktop/
+│
+├── main_desktop.cpp                # Desktop entry point — mirrors app_main(), runs engine on background thread
+├── WE_SDLManager.hpp / .cpp        # SDL3 window + renderer lifecycle; init/shutdown/pollEvents
+├── WE_SDLInputDriver.hpp / .cpp    # SDL3 event → WE_Controller translation
+├── WE_SDLKeyMap.hpp                # SDL3 keycode → WE button mapping table
+├── CMakeLists.txt                  # CMake build for desktop target
+├── Buildit.bat                     # Windows helper script to configure + build via CMake
+├── build/                          # CMake build artifacts (not tracked)
+└── stubs/                          # ESP-IDF API stubs — let WolfEngine compile on desktop
+    ├── WE_Display_SDL3.hpp / .cpp
+    ├── Display_SDL.h
+    ├── esp_err.h / esp_log.h / esp_timer.h
+    ├── driver/gpio.h / i2c.h / ledc.h
+    ├── esp_adc/adc_oneshot.h
+    └── freertos/FreeRTOS.h / semphr.h
+```
+
+## Non Source Folders and items:
+- `IconsPhotosEtc/` — assets for README only, not used in development
+- `test/` — PlatformIO test directory (currently empty)
+- `cxx_only_flags.py` — extra script: applies C++-only flags that ESP-IDF

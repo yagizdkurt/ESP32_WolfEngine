@@ -1,20 +1,30 @@
 # Ignore everything...
 *
+
 # other than...
 # specific top-level files,
 !.gitignore
 !LICENSE
 !README.md
+!platformio.ini
+!cxx_only_flags.py
+!mkdocs.yml
 
 # ProjectFolders
 !IconsPhotosEtc/
 !IconsPhotosEtc/**
-!WolfEngine/
-!WolfEngine/**
+!src/
+!src/**
 !Documentation/
 !Documentation/**
 !desktop/
 !desktop/**
+!.github/
+!.github/**
+
+# PlatformIO Special Folders
+!test/
+!test/**
 
 # Exclude build output
 desktop/build/

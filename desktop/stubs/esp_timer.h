@@ -8,7 +8,5 @@
 inline int64_t esp_timer_get_time() {
     static auto start = std::chrono::steady_clock::now();
     auto now = std::chrono::steady_clock::now();
-    return static_cast<int64_t>(
-        std::chrono::duration_cast<std::chrono::microseconds>(now - start).count()
-    );
+    return static_cast<int64_t>( std::chrono::duration_cast<std::chrono::microseconds>(now - start).count() );
 }
