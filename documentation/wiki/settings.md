@@ -79,7 +79,11 @@ constexpr RenderSettings RENDER_SETTINGS = {
     .spriteSystemEnabled = true,
     .cleanFramebufferEachFrame = true
 };
+
+static constexpr uint16_t MAX_DRAW_COMMANDS = 128;
 ```
+
+`MAX_DRAW_COMMANDS` controls command buffer capacity per frame. If the buffer fills, extra commands are dropped and counted in renderer diagnostics.
 
 ### defaultBackgroundPixel:
 
@@ -99,3 +103,13 @@ Common values:
 
 Rectangular area of the screen used for game rendering. `{ x1, y1, x2, y2 }` (`x2` and `y2` are exclusive)
 Outside this region will not be rendered per frame but will be rendered when UI gets dirty.
+
+### spriteSystemEnabled
+
+When `true`, `SpriteRenderer` components submit sprite draw commands during component tick.
+When `false`, `SpriteRenderer` submits nothing. The renderer still runs command sort/execute and UI/flush each frame.
+
+### cleanFramebufferEachFrame
+
+When `true`, the renderer clears the framebuffer to `defaultBackgroundPixel` at frame start.
+When `false`, previous frame pixels persist until overwritten.

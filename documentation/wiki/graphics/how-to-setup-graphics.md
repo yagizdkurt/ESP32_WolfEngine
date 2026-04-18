@@ -73,7 +73,7 @@ constexpr uint8_t PlayerPixels[] = { // 7x7
 
 Declare a `SpriteRenderer` as a public member and construct it with the array you created. See [Sprite Renderer](../gameobjects-and-components/sprite-renderer.md) for the constructor.
 
-The SpriteRenderer registers with the renderer automatically and draws at the GameObject's `transform.position` every frame.
+The SpriteRenderer submits a sprite draw command during component tick. The renderer executes buffered commands later in the frame.
 
 ```cpp
 #include "WolfEngine/WolfEngine.hpp"
@@ -103,13 +103,15 @@ public:
 Layers control draw order. Lower layers are drawn first — higher layers appear on top. Assign the layer at SpriteRenderer construction time:
 
 ```cpp
-SpriteRenderer background = SpriteRenderer(this, &BG_SPRITE, PALETTE_COOL, RenderLayer::Background);
+SpriteRenderer background = SpriteRenderer(this, &BG_SPRITE, PALETTE_COOL, RenderLayer::BackGround);
 SpriteRenderer enemy      = SpriteRenderer(this, &ENEMY_SPRITE, PALETTE_WARM, RenderLayer::Entities);
 SpriteRenderer player     = SpriteRenderer(this, &PLAYER_SPRITE, PALETTE_GRAYSCALE, RenderLayer::Player);
 SpriteRenderer explosion  = SpriteRenderer(this, &FX_SPRITE, PALETTE_SUNSET, RenderLayer::FX);
 ```
 
-See [Render Layers](../settings.md) to customize the layer list.
+See [Render Layers](../render-layers.md) to customize the layer list.
+
+Within the same layer, sprites are sorted by draw Y by default. Use `setSortKey()` on `SpriteRenderer` if you need explicit ordering.
 
 ---
 

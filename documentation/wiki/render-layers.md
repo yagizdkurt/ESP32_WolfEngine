@@ -6,7 +6,7 @@ Layers are settings that users can change according to their game.
 
 ## RenderLayer
 
-Render layers control the draw order of sprites. Layers are drawn in ascending order — layer 0 is drawn first (bottom), the highest layer is drawn last (top). See [Renderer](../core-systems/renderer.md) for how layers fit into the rendering pipeline.
+Render layers control the primary draw order of commands. Layers are drawn in ascending order - layer 0 is drawn first (bottom), the highest layer is drawn last (top). See [Renderer](../core-systems/renderer.md) for how layers fit into the rendering pipeline.
 
 ---
 
@@ -46,7 +46,7 @@ enum class CollisionLayer : uint16_t {
 Pass a layer when creating a sprite:
 
 ```cpp
-SpriteRenderer sr = SpriteRenderer(this, &playerSprite, PALETTE_WARM, static_cast<int>(RenderLayer::Player));
+SpriteRenderer sr = SpriteRenderer(this, &playerSprite, PALETTE_WARM, RenderLayer::Player);
 ```
 
 See [Sprite Renderer](../gameobjects-and-components/sprite-renderer.md) for more details.
@@ -55,7 +55,7 @@ See [Sprite Renderer](../gameobjects-and-components/sprite-renderer.md) for more
 
 ## Customizing Layers
 
-You can rename, add, or remove layers freely to match your game. The only rule is `MAX_LAYERS` must always be the last entry — it is used internally by the engine to know how many layers to manage and will automatically equal the layer count.
+You can rename, add, or remove layers freely to match your game. The only rule is `MAX_LAYERS` must always be the last entry - it is used internally for layer bounds and ordering and will automatically equal the layer count.
 
 ```cpp
 enum class RenderLayer {
@@ -80,4 +80,11 @@ enum class CollisionLayer : uint16_t {
 
 ## Memory
 
-Each Render layer costs `MAX_GAME_OBJECTS * 4` bytes of RAM. With 6 layers and 64 max objects that is `6 * 64 * 4 = 1536 bytes`. Remove unused layers if RAM is tight.
+Render layers themselves do not allocate a per-layer sprite slot table anymore.
+
+Renderer command memory is now primarily:
+
+- `MAX_DRAW_COMMANDS * sizeof(DrawCommand)` for the shared command buffer
+- `sizeof(FrameDiagnostics)` for runtime counters
+
+With the default `MAX_DRAW_COMMANDS = 128` on ESP32, this is about `128 * 20 + 8 = 2568` bytes (approximate; depends on struct padding).

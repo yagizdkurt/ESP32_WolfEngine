@@ -1,6 +1,6 @@
 # Sprite Renderer
 
-`SpriteRenderer` is the component that makes a [GameObject](gameobject.md) visible on screen. It is split into two parts — a `Sprite` asset that holds pixel data in flash, and the `SpriteRenderer` component that the renderer talks to.
+`SpriteRenderer` is the component that makes a [GameObject](gameobject.md) visible on screen. It is split into two parts - a `Sprite` asset that holds pixel data in flash, and the `SpriteRenderer` component that submits draw commands to the renderer.
 
 ---
 
@@ -57,7 +57,15 @@ public:
 };
 ```
 
-The SpriteRenderer registers with the renderer on construction and unregisters on destruction — you never manage this manually.
+`SpriteRenderer` is tick-enabled by default. During component tick it:
+
+1. Converts world position to screen position using the camera
+2. Culls sprites fully outside the game region
+3. Submits a sprite `DrawCommand` to the renderer
+
+This happens only when `RENDER_SETTINGS.spriteSystemEnabled` is `true`.
+
+Because command submission happens in component tick (before `Update()` and camera follow), sprites render using previous-frame transform/camera state.
 
 > **Note:** You can use your defined render layers with the RenderLayer enum. Check [Layers](../settings.md) for more information.
 
@@ -131,16 +139,27 @@ spriteRenderer.setVisible(true);   // visible again
 
 ---
 
+## Sort Key Override
+
+By default, sprites are ordered within the same render layer by draw Y. You can override this with `setSortKey()`:
+
+```cpp
+spriteRenderer.setSortKey(100); // explicit order inside the same layer
+spriteRenderer.clearSortKey();  // back to default drawY sorting
+```
+
+---
+
 ## Swapping Sprites
 
-Swap the active `Sprite` asset at runtime with `setSprite()`. This is how the [Animator](animator.md) drives frame-based animation — just a pointer swap, no allocation or renderer registration changes.
+Swap the active `Sprite` asset at runtime with `setSprite()`. This is how the [Animator](animator.md) drives frame-based animation - just a pointer swap, no allocation and no manual render-pipeline changes.
 
 ```cpp
 spriteRenderer.setSprite(&SPRITE_WALK_A);
 spriteRenderer.setSprite(&SPRITE_WALK_B);
 ```
 
-> **Note:** Never reassign a `SpriteRenderer` member with `= SpriteRenderer(...)` at runtime — this will cause double registration with the renderer and potential dangling pointers.
+> **Note:** Never reassign a `SpriteRenderer` member with `= SpriteRenderer(...)` at runtime. Update sprite/palette/rotation/visibility on the existing component instance instead.
 
 ---
 

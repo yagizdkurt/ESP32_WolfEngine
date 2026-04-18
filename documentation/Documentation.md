@@ -85,11 +85,13 @@ void StartGame();              // blocking game loop
 **Frame tick order (`gameTick()`):**
 1. `InputManager::tick()` — poll buttons / joysticks
 2. `ModuleSystem::UpdateAll()` — tick all registered modules
-3. `GameObject::componentTick()` for each active object — component logic before game logic
+3. `GameObject::componentTick()` for each active object — component logic before game logic (`SpriteRenderer` submits draw commands here)
 4. `GameObject::Update()` for each active object — user game logic
 5. `ColliderManager::tick()` — collision detection + events
 6. `Camera::followTick()` — camera follow after movement
-7. `Renderer::render()` — composite framebuffer + DMA flush
+7. `Renderer::render()` — clear framebuffer + sort/execute command buffer + UI (if dirty) + flush
+
+Because sprite commands are submitted in step 3, but movement/camera updates happen in steps 4 and 6, sprites render using previous-frame transform/camera state.
 
 **Key dependencies:** All core subsystems (renderer, camera, input, UI, sound, colliders)
 plus `ModuleRegistry` for optional modules.
@@ -104,19 +106,20 @@ independently without z-order bugs.
 
 **Public interface:**
 ```cpp
-void registerSprite(SpriteData*, RenderLayer);
-void unregisterSprite(SpriteData*);
-void render();                 // composites all layers → calls display flush
+uint16_t* getCanvas();
+bool submitDrawCommand(const DrawCommand& cmd);
+const FrameDiagnostics& getDiagnostics() const;
+void render();                 // clear -> sort/execute command buffer -> UI (if dirty) -> flush
 ```
 
 **Key design choices:**
 - Framebuffer is a flat `uint16_t` array of `width × height` pixels.
-- Five fixed layers (`BackGround → World → Entities → Player → FX`) drawn in order;
-  higher layers paint over lower.
-- Index 0 in any palette is transparent — `drawSprite()` skips those pixels.
+- Draw operations are submitted as `DrawCommand` entries into a fixed per-frame buffer (`MAX_DRAW_COMMANDS`).
+- Commands are sorted by `(layer, sortKey)` before execution.
+- Index 0 in any palette is transparent; sprite drawing skips those pixels.
 - Per-pixel bounds checking clips sprites to the camera's game region rectangle.
-- Rotation (0/90/180/270°) implemented by remapping pixel coordinates at blit time —
-  no intermediate buffer.
+- Rotation (0/90/180/270°) is still implemented by source index remapping at blit time.
+- Buffer overflow is explicit: commands are dropped, counted in diagnostics, and logged.
 
 
 ---
@@ -188,7 +191,7 @@ game-specific logic in `GameObject` subclasses.
 | Component | Purpose |
 |---|---|
 | `TransformComponent` | Position + size. Always on every GO. |
-| `SpriteRendererComponent` | Binds a `Sprite` asset + palette to a render slot. Auto-registers/deregisters with `RenderCore`. |
+| `SpriteRendererComponent` | Binds a `Sprite` asset + palette and submits sprite `DrawCommand`s during component tick. |
 | `ColliderComponent` | Box or circle shape; collision + trigger layer bitmasks; offset from transform origin. |
 | `AnimatorComponent` | Drives `SpriteRenderer` frame index over time; play/pause; per-animation frame duration. |
 

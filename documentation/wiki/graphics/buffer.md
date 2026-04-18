@@ -35,4 +35,4 @@ spriteSystemEnabled = true,
 cleanFramebufferEachFrame = true,
 ```
 
-Disabling `spriteSystemEnabled` removes the entire sprite rendering pass from the binary at compile time — no sprites will be drawn and no sprite rendering code will be linked. Disabling `cleanFramebufferEachFrame` means pixels you wrote last frame will persist unless you overwrite them yourself.
+Disabling `spriteSystemEnabled` stops `SpriteRenderer` from submitting sprite commands. The renderer still runs its command execution, UI render, and display flush path each frame. Disabling `cleanFramebufferEachFrame` means pixels you wrote last frame will persist unless you overwrite them yourself.

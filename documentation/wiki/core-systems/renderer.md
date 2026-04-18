@@ -1,6 +1,6 @@
 # Renderer
 
-The Renderer is an internal WolfEngine system. It manages the framebuffer, sprite layer table, and drives the full draw and flush cycle every frame. You do not interact with it directly in game code — sprites register themselves automatically and the engine drives rendering each frame.
+The Renderer is an internal WolfEngine system. It manages the framebuffer, a fixed-size per-frame `DrawCommand` buffer, and the full draw/flush cycle every frame. You do not usually call it directly in game code - `SpriteRenderer` and other systems submit commands, and the engine drives rendering each frame.
 
 This page explains how rendering works under the hood and how to add a custom display driver.
 
@@ -15,8 +15,10 @@ Every frame the renderer executes four steps in order:
 **1. Clear**
 If `cleanFramebufferEachFrame` is enabled in [Settings](../settings.md), the framebuffer is filled with `defaultBackgroundPixel`. This erases everything drawn in the previous frame. Disable this if you are managing the framebuffer manually and want to retain previous frame contents.
 
-**2. Draw Game Region**
-If `spriteSystemEnabled` is enabled in [Settings](../settings.md), all sprite layers from `LAYER_BACKGROUND` through `LAYER_FX` are iterated in order. Each sprite's world position is converted to screen coordinates via the camera, clipped to the game region, and written pixel-by-pixel into the framebuffer. Transparent pixels (palette index 0) are skipped. Sprites outside the game region are culled before drawing.
+**2. Sort + Execute Command Buffer**
+The renderer sorts buffered commands by `(layer, sortKey)` and executes them in one linear pass. For sprite commands, transparent pixels (palette index 0) are skipped and drawing is clipped to the game region.
+
+`SpriteRenderer` produces sprite commands during component tick when `spriteSystemEnabled` is `true` (see [Settings](../settings.md)). The renderer itself still runs sort/execute every frame, even when sprite submission is disabled.
 
 **3. Draw UI Region**
 The UI region is only redrawn when something has changed — this is the dirty flag system. If no UI element has been modified since the last frame this step is skipped entirely. See [UI Manager](ui-manager.md) for details.
@@ -48,9 +50,27 @@ See [Settings](../settings.md) to configure `gameRegion`.
 
 ## Sprite Layers
 
-Sprites are sorted into layers which are drawn in ascending order — layer 0 is drawn first (bottom), the highest layer is drawn last (top). Layer assignment happens at sprite creation time and cannot be changed at runtime.
+Commands are sorted by layer in ascending order - layer 0 is drawn first (bottom), the highest layer is drawn last (top).
 
-See [Render Layers](../settings.md) for the full layer configuration.
+Within a layer, commands are sorted by `sortKey` in ascending order. For `SpriteRenderer`, the default sort key is the sprite draw Y value (screen-space top), which gives automatic painter-style Y sorting. This can be overridden with `setSortKey()`.
+
+See [Render Layers](../render-layers.md) for the full layer configuration.
+
+---
+
+## Command Buffer Capacity
+
+The command buffer capacity is configured by `MAX_DRAW_COMMANDS` in render settings.
+
+- If the buffer fills in a frame, new commands are dropped.
+- Drops are counted in renderer diagnostics (`commandsDropped`) and logged.
+- `peakCommandCount` helps tune capacity for your game.
+
+You can inspect diagnostics via:
+
+```cpp
+const FrameDiagnostics& d = RenderSys().getDiagnostics();
+```
 
 ---
 
@@ -62,7 +82,7 @@ The renderer supports four rotation states per sprite — `R0`, `R90`, `R180`, `
 
 ## Render Settings
 
-All rendering behaviour is configured in `WE_Settings.hpp`. Check [Settings](../settings.md) for more information.
+All rendering behaviour is configured in `WE_RenderSettings.hpp` (included by `WE_Settings.hpp`). Check [Settings](../settings.md) for more information.
 
 ---
 
@@ -89,7 +109,10 @@ The renderer is decoupled from the physical display through a `DisplayDriver` ba
 ```
 
 **Built-in: ST7735**
-The default driver targets the ST7735 128x160 TFT over SPI. Pin assignments are configured in [Pin Definitions](pin-definitions.md).
+The default embedded driver targets the ST7735 128x160 TFT over SPI. Pin assignments are configured in [Pin Definitions](pin-definitions.md).
+
+**Built-in: SDL (desktop)**
+Desktop builds can use the SDL display driver to preview rendering without ESP hardware.
 
 **Custom Driver**
 To use a different display, define `DISPLAY_CUSTOM` and implement the `DisplayDriver` interface in `Display_Custom.h`. Your driver must provide:

@@ -46,14 +46,16 @@ Inside the running loop, sound is updated continuously. A full game tick is exec
 
 1. Input tick
 2. Module update
-3. Component tick for active objects
+3. Component tick for active objects (SpriteRenderer submits draw commands here)
 4. `Update()` for active objects
 5. Collider manager tick
 6. Camera follow tick
-7. Renderer render/flush
+7. Renderer render/flush (clear -> sort/execute command buffer -> UI (if dirty) -> flush)
 8. `WETime::incrementFrameCount()`
 
 Frame pacing is currently done by elapsed-time gating, not by explicit sleep.
+
+Because sprite commands are submitted in step 3 but movement/camera updates happen in steps 4 and 6, sprite rendering uses previous-frame transform/camera state.
 
 ---
 
