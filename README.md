@@ -33,8 +33,7 @@ Built with PlatformIO and ESP-IDF. No Unity. No Godot. Just you, your ESP32, and
 
 ## 📖 Documentation
 
-Full documentation is available on the [[Wiki](https://github.com/yagizdkurt/WolfEngine/wiki).](https://yagizdkurt.github.io/WolfEngine/)
-
+Full documentation is available on the https://yagizdkurt.github.io/WolfEngine/
 ---
 
 ## 📊 Memory Usage
