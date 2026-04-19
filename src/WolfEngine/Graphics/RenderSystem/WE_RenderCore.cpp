@@ -17,10 +17,11 @@ void Renderer::initialize() { m_driver->initialize(); }
 //  Overflow is loud: dropped commands are counted and logged.
 // -------------------------------------------------------------
 bool Renderer::submitDrawCommand(const DrawCommand& cmd) {
-    if (m_commandCount >= MAX_DRAW_COMMANDS) { // Buffer full — drop command and log
+    if (m_commandCount >= MAX_DRAW_COMMANDS) {
+        if (m_diagnostics.commandsDropped == 0) {
+            ESP_LOGW("Renderer", "Draw command buffer full — first drop this frame");
+        }
         m_diagnostics.commandsDropped++;
-        // One log per drop — avoid flooding; callers can check getDiagnostics()
-        ESP_LOGW("Renderer", "DrawCommand buffer full (%d) — command dropped", MAX_DRAW_COMMANDS);
         return false;
     }
     
@@ -86,16 +87,13 @@ void IRAM_ATTR Renderer::drawSpriteInternal(int16_t x, int16_t y,
 //  sortCommands
 //  Insertion sort — O(N) on nearly-sorted input (expected case),
 //  no heap allocation, safe on embedded targets.
-//  Primary key: layer (ascending). Secondary key: sortKey (ascending).
+//  Single key: sortKey (ascending) — layer in high byte, screenY in low byte.
 // -------------------------------------------------------------
 void Renderer::sortCommands() {
     for (int i = 1; i < m_commandCount; ++i) {
         DrawCommand key = m_commandBuffer[i];
         int j = i - 1;
-        while (j >= 0 &&
-               (m_commandBuffer[j].layer > key.layer ||
-               (m_commandBuffer[j].layer == key.layer &&
-                m_commandBuffer[j].sortKey > key.sortKey))) {
+        while (j >= 0 && m_commandBuffer[j].sortKey > key.sortKey) {
             m_commandBuffer[j + 1] = m_commandBuffer[j];
             j--;
         }
@@ -112,14 +110,16 @@ void Renderer::executeCommands() {
     for (uint16_t i = 0; i < m_commandCount; ++i) {
         const DrawCommand& cmd = m_commandBuffer[i];
         switch (cmd.type) {
-            case DrawCommandType::Sprite:
+            case DrawCommandType::Sprite: {
+                Rotation rot = cmdGetRotation(cmd.flags);
                 drawSpriteInternal(cmd.x, cmd.y,
                                    cmd.sprite.pixels,
                                    cmd.sprite.palette,
                                    cmd.sprite.size,
-                                   cmd.sprite.rotation);
+                                   rot);
                 m_diagnostics.commandsExecuted++;
                 break;
+            }
             // future types added here
         }
     }

@@ -115,11 +115,11 @@ void render();                 // clear -> sort/execute command buffer -> UI (if
 **Key design choices:**
 - Framebuffer is a flat `uint16_t` array of `width × height` pixels.
 - Draw operations are submitted as `DrawCommand` entries into a fixed per-frame buffer (`MAX_DRAW_COMMANDS`).
-- Commands are sorted by `(layer, sortKey)` before execution.
+- Commands are sorted by a packed `sortKey` (`uint16_t`): high byte = `RenderLayer`, low byte = screenY.
 - Index 0 in any palette is transparent; sprite drawing skips those pixels.
 - Per-pixel bounds checking clips sprites to the camera's game region rectangle.
 - Rotation (0/90/180/270°) is still implemented by source index remapping at blit time.
-- Buffer overflow is explicit: commands are dropped, counted in diagnostics, and logged.
+- Buffer overflow is explicit: commands are dropped and counted in diagnostics; logging is throttled to the first drop in a frame.
 
 
 ---

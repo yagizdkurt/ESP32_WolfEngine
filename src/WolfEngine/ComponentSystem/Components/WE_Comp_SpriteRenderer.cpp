@@ -7,7 +7,7 @@ SpriteRenderer::SpriteRenderer(GameObject* owner, const Sprite* sprite, const ui
     : m_owner   (owner)
     , m_sprite  (sprite)
     , m_palette (palette)
-    , m_layer   (static_cast<int16_t>(layer))
+    , m_layer   (static_cast<uint8_t>(layer))
 {
     type        = COMP_SPRITE;
     tickEnabled = true;  // base class defaults to false — must be set explicitly
@@ -33,14 +33,16 @@ void SpriteRenderer::onDraw() {
 
     DrawCommand cmd;
     cmd.type             = DrawCommandType::Sprite;
-    cmd.layer            = static_cast<RenderLayer>(m_layer);
     cmd.x                = drawX;
     cmd.y                = drawY;
-    cmd.sortKey          = m_useSortKeyOverride ? m_sortKeyOverride : drawY;
+    cmd.flags            = cmdSetRotation(0, m_rotation);
+    uint8_t sortByte     = m_useSortKeyOverride
+                             ? static_cast<uint8_t>(m_sortKeyOverride)
+                             : static_cast<uint8_t>(drawY);
+    cmd.sortKey          = cmdMakeSortKey(static_cast<RenderLayer>(m_layer), sortByte);
     cmd.sprite.pixels    = m_sprite->pixels;
     cmd.sprite.palette   = m_palette;
-    cmd.sprite.size      = sz;
-    cmd.sprite.rotation  = m_rotation;
+    cmd.sprite.size      = static_cast<uint8_t>(sz);
 
     RenderSys().submitDrawCommand(cmd);
 }

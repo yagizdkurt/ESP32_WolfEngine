@@ -77,7 +77,7 @@ public:
     const Sprite* getSprite()   const { return m_sprite;   }
     bool          isVisible()   const { return m_visible;  }
     Rotation      getRotation() const { return m_rotation; }
-    int16_t       getLayer()    const { return m_layer;    }
+    uint8_t       getLayer()    const { return m_layer;    }
 
 private:
     void onDraw();
@@ -86,10 +86,10 @@ private:
     class GameObject*  m_owner;
     const Sprite*      m_sprite;
     const uint16_t*    m_palette;
-    int16_t            m_layer;
+    uint8_t            m_layer;
     Rotation           m_rotation = Rotation::R0;
     bool               m_useSortKeyOverride = false;
-    int16_t           m_sortKeyOverride = 0;
+    int16_t            m_sortKeyOverride = 0;
     bool               m_visible  = true;
 
     friend class Animator;

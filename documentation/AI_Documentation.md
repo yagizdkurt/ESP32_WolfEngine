@@ -99,10 +99,10 @@ void render();                 // clear -> sort/execute command buffer -> UI (if
 **Key design choices:**
 - Framebuffer is a flat `uint16_t` array of `width × height` pixels.
 - Draw operations are submitted as `DrawCommand` entries into a fixed per-frame buffer (`MAX_DRAW_COMMANDS`).
-- Commands are sorted by `(layer, sortKey)` before execution.
+- Commands are sorted by a packed `sortKey` (`uint16_t`): high byte = `RenderLayer`, low byte = screenY.
 - Index 0 in any palette is transparent; sprite drawing skips those pixels.
 - Per-pixel bounds checking clips sprites to the configured game region.
-- Overflow is explicit: extra commands are dropped, counted in diagnostics, and logged.
+- Overflow is explicit: extra commands are dropped and counted in diagnostics; logging is throttled to the first drop in a frame.
 - `spriteSystemEnabled` gates sprite command production in `SpriteRenderer::tick()`, not renderer execution.
 
 

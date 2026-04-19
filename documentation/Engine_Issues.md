@@ -46,16 +46,6 @@ section added. Do not delete entries from this file — strike-through is not su
 
 ---
 
-## Diagnostics Counters Are Lifetime Totals, Not Per-Frame
-
-**Status:** Active  
-**Severity:** Low  
-**Location:** `src/WolfEngine/Graphics/RenderSystem/WE_RenderCore.hpp` — `FrameDiagnostics`  
-**What it is:** `commandsSubmitted`, `commandsDropped`, and `commandsExecuted` accumulate over the lifetime of the program and are never reset. To get per-frame values the caller must snapshot and subtract externally.  
-**Impact:** Any debug overlay showing current frame stats requires external bookkeeping. Querying `getDiagnostics().commandsSubmitted` after 10 seconds at 30fps returns 6,000+, not the current frame count.  
-**Maintenance note:** Reset the three per-frame counters at the top of `beginFrame()` before any submissions occur. Keep `peakCommandCount` unreset — it is a lifetime watermark. This makes all three counters reflect exactly the current frame when queried after `executeAndFlush()`.
-
----
 
 ## One-Frame Position Lag in Sprite Rendering
 
@@ -68,16 +58,6 @@ section added. Do not delete entries from this file — strike-through is not su
 
 ---
 
-## `DrawCommand` Struct Padding Unverified
-
-**Status:** Active  
-**Severity:** Medium  
-**Location:** `src/WolfEngine/Graphics/RenderSystem/WE_DrawCommand.hpp`  
-**What it is:** `sizeof(DrawCommand)` has not been verified on ESP32. Compiler padding may push the real size to 24–28 bytes instead of the estimated 20, costing up to 1 KB of unbudgeted RAM at 128 commands.  
-**Impact:** Silent RAM overrun. At 28 bytes × 128 commands = 3,584 bytes versus the budgeted 2,560.  
-**Maintenance note:** Add `static_assert(sizeof(DrawCommand) <= 24, "check padding")` to the header. If it fires, reorder fields largest-to-smallest alignment and explicitly size `Rotation` as `uint8_t`.
-
----
 
 ## Public Interfaces in Active Flux
 

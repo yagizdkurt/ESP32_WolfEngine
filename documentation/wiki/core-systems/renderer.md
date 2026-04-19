@@ -16,7 +16,7 @@ Every frame the renderer executes four steps in order:
 If `cleanFramebufferEachFrame` is enabled in [Settings](../settings.md), the framebuffer is filled with `defaultBackgroundPixel`. This erases everything drawn in the previous frame. Disable this if you are managing the framebuffer manually and want to retain previous frame contents.
 
 **2. Sort + Execute Command Buffer**
-The renderer sorts buffered commands by `(layer, sortKey)` and executes them in one linear pass. For sprite commands, transparent pixels (palette index 0) are skipped and drawing is clipped to the game region.
+The renderer sorts buffered commands by `sortKey` and executes them in one linear pass. `sortKey` is packed as `uint16_t` (`RenderLayer` in the high byte, screenY in the low byte), so one ascending compare yields layer order plus in-layer Y sorting. For sprite commands, transparent pixels (palette index 0) are skipped and drawing is clipped to the game region.
 
 `SpriteRenderer` produces sprite commands during component tick when `spriteSystemEnabled` is `true` (see [Settings](../settings.md)). The renderer itself still runs sort/execute every frame, even when sprite submission is disabled.
 
@@ -50,9 +50,9 @@ See [Settings](../settings.md) to configure `gameRegion`.
 
 ## Sprite Layers
 
-Commands are sorted by layer in ascending order - layer 0 is drawn first (bottom), the highest layer is drawn last (top).
+Commands are sorted by a single ascending packed `sortKey`. Because the high byte stores `RenderLayer`, layer 0 is drawn first (bottom) and the highest layer is drawn last (top).
 
-Within a layer, commands are sorted by `sortKey` in ascending order. For `SpriteRenderer`, the default sort key is the sprite draw Y value (screen-space top), which gives automatic painter-style Y sorting. This can be overridden with `setSortKey()`.
+Within a layer (same high byte), the low byte sorts by screenY in ascending order. For `SpriteRenderer`, the default sort source is draw Y (screen-space top), and you can override it with `setSortKey()`.
 
 See [Render Layers](../render-layers.md) for the full layer configuration.
 
@@ -63,7 +63,7 @@ See [Render Layers](../render-layers.md) for the full layer configuration.
 The command buffer capacity is configured by `MAX_DRAW_COMMANDS` in render settings.
 
 - If the buffer fills in a frame, new commands are dropped.
-- Drops are counted in renderer diagnostics (`commandsDropped`) and logged.
+- Drops are counted in renderer diagnostics (`commandsDropped`). Logging is throttled to the first drop in a frame.
 - `peakCommandCount` helps tune capacity for your game.
 
 You can inspect diagnostics via:
@@ -76,7 +76,7 @@ const FrameDiagnostics& d = RenderSys().getDiagnostics();
 
 ## Rotation
 
-The renderer supports four rotation states per sprite — `R0`, `R90`, `R180`, `R270`. Rotation is applied per-pixel at draw time by remapping the source pixel index. There is no rotation matrix — it is index arithmetic, so it has minimal overhead.
+The renderer supports four rotation states per sprite — `R0`, `R90`, `R180`, `R270`. Rotation is encoded in `DrawCommand.flags` bits 7-6 and extracted during command execution. It is applied per-pixel at draw time by remapping the source pixel index. There is no rotation matrix — it is index arithmetic, so it has minimal overhead.
 
 ---
 

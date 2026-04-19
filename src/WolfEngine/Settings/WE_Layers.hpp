@@ -20,7 +20,7 @@
 //      Player     — player sprite, always above enemies
 //      FX         — particle effects, explosions
 // -------------------------------------------------------------
-enum class RenderLayer : int16_t {
+enum class RenderLayer : uint8_t {
 // Generally Defaults to Entitites, but can be used for any layer you want to be the default when not specifying a layer.
     Default    = 2,
     DEFAULT    = 2, // alias for Default

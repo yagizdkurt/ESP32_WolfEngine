@@ -83,7 +83,7 @@ constexpr RenderSettings RENDER_SETTINGS = {
 static constexpr uint16_t MAX_DRAW_COMMANDS = 128;
 ```
 
-`MAX_DRAW_COMMANDS` controls command buffer capacity per frame. If the buffer fills, extra commands are dropped and counted in renderer diagnostics.
+`MAX_DRAW_COMMANDS` controls command buffer capacity per frame. If the buffer fills, extra commands are dropped and counted in renderer diagnostics (the renderer logs only the first drop in that frame).
 
 ### defaultBackgroundPixel:
 
