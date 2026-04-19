@@ -27,9 +27,13 @@ struct DrawCommand {
     };
 };
 
+static_assert(sizeof(DrawCommand) <= 24, "DrawCommand exceeds 24 bytes — check field ordering and padding");
+static_assert(std::is_trivially_copyable_v<DrawCommand>);
+static_assert(alignof(DrawCommand) <= 4);
+
 struct FrameDiagnostics {
-    uint16_t commandsSubmitted;  // running total — diff between frames for per-frame count
-    uint16_t commandsDropped;    // running total — incremented on buffer overflow
-    uint16_t commandsExecuted;   // running total — incremented per executed command
+    uint16_t commandsSubmitted;  // per-frame — diff between frames for per-frame count
+    uint16_t commandsDropped;    // per-frame — incremented on buffer overflow
+    uint16_t commandsExecuted;   // per-frame — incremented per executed command
     uint16_t peakCommandCount;   // high watermark across all frames — never resets
 };

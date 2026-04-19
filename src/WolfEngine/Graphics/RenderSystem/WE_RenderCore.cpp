@@ -3,6 +3,10 @@
 #include "WolfEngine/WolfEngine.hpp"
 #include "esp_log.h"
 
+#ifndef IRAM_ATTR
+#define IRAM_ATTR
+#endif
+
 void Renderer::initialize() { m_driver->initialize(); }
 
 
@@ -32,7 +36,7 @@ bool Renderer::submitDrawCommand(const DrawCommand& cmd) {
 //  command fields. Handles rotation index math, transparency,
 //  and per-pixel bounds checking against the game region.
 // -------------------------------------------------------------
-void Renderer::drawSpriteInternal(int16_t x, int16_t y,
+void IRAM_ATTR Renderer::drawSpriteInternal(int16_t x, int16_t y,
                                    const uint8_t*  pixels,
                                    const uint16_t* palette,
                                    int size, Rotation rotation) {
@@ -128,6 +132,12 @@ void Renderer::executeCommands() {
 //  Called once at the start of each frame before component ticks.
 // -------------------------------------------------------------
 void Renderer::beginFrame() {
+    // Reset diagnostics for this frame
+    m_diagnostics.commandsSubmitted = 0;
+    m_diagnostics.commandsDropped   = 0;
+    m_diagnostics.commandsExecuted  = 0;
+
+    // Clear framebuffer to background color if enabled in settings
     if constexpr (RENDER_SETTINGS.cleanFramebufferEachFrame) {
         constexpr uint16_t bg         = RENDER_SETTINGS.defaultBackgroundPixel;
         constexpr uint16_t bgSwapped  = (bg >> 8) | (bg << 8);
@@ -147,9 +157,7 @@ void Renderer::executeAndFlush() {
     sortCommands();
     executeCommands();
 
-    m_diagnostics.peakCommandCount =
-        (m_commandCount > m_diagnostics.peakCommandCount)
-        ? m_commandCount : m_diagnostics.peakCommandCount;
+    m_diagnostics.peakCommandCount = (m_commandCount > m_diagnostics.peakCommandCount) ? m_commandCount : m_diagnostics.peakCommandCount;
     m_commandCount = 0;
     // commandsSubmitted / commandsDropped / commandsExecuted are running lifetime totals — not reset here.
 
