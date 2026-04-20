@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <utility>
+#include <assert.h>
 #include "WolfEngine/Graphics/RenderSystem/WE_RenderCore.hpp"
 #include "WE_UITransformHelpers.hpp"
 
@@ -44,8 +45,8 @@ struct UIRect {
     int16_t width;
     int16_t height;
 
-    constexpr int16_t x2()      const { return static_cast<int16_t>(x + width);            }
-    constexpr int16_t y2()      const { return static_cast<int16_t>(y + height);           }
+    constexpr int16_t x2()      const { return static_cast<int16_t>(x + width);             }
+    constexpr int16_t y2()      const { return static_cast<int16_t>(y + height);            }
     constexpr int16_t centerX() const { return static_cast<int16_t>(x + floorDiv2(width));  }
     constexpr int16_t centerY() const { return static_cast<int16_t>(y + floorDiv2(height)); }
     constexpr bool    isEmpty() const { return width <= 0 || height <= 0; }
@@ -65,22 +66,26 @@ struct UITransform {
     int16_t  y;
     int16_t  width;
     int16_t  height;
+    uint8_t  layer;
+    UIAnchor anchor;
     int8_t   marginLeft;
     int8_t   marginRight;
     int8_t   marginTop;
     int8_t   marginBottom;
-    UIAnchor anchor;
 
-    constexpr UITransform(
+    UITransform(
         int16_t x_ = 0, int16_t y_ = 0,
         int16_t w_ = 0, int16_t h_ = 0,
+        uint8_t layer_ = 0,
+        UIAnchor a = UIAnchor::Center,
         int8_t ml = 0, int8_t mr = 0,
-        int8_t mt = 0, int8_t mb = 0,
-        UIAnchor a = UIAnchor::Center)
+        int8_t mt = 0, int8_t mb = 0)
         : x(x_), y(y_), width(w_), height(h_),
+          layer(layer_), anchor(a),
           marginLeft(ml), marginRight(mr),
-          marginTop(mt), marginBottom(mb),
-          anchor(a) {}
+          marginTop(mt), marginBottom(mb)
+        {}
+
 };
 
 // =============================================================
@@ -152,8 +157,11 @@ UIRect resolveAnchor(UIAnchor anchor, int16_t elemW, int16_t elemH) noexcept
 //  where they should be drawn on screen.
 // =============================================================
 [[nodiscard]] constexpr
-UIRect resolveLayout(const UITransform& tf) noexcept
+UIRect resolveLayout(const UITransform& tf)
 {
+    assert(tf.width  > 0 && "UITransform width must be > 0");
+    assert(tf.height > 0 && "UITransform height must be > 0");
+
     const uint8_t anchorIndex = sanitizeAnchorIndex(tf.anchor);
     const int16_t anchorCol   = static_cast<int16_t>(anchorIndex % 3); // 0=left, 1=center, 2=right
     const int16_t anchorRow   = static_cast<int16_t>(anchorIndex / 3); // 0=top,  1=middle, 2=bottom

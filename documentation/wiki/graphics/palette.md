@@ -66,7 +66,14 @@ constexpr uint8_t PlayerSprite[] = {
 For UI labels, use the enum directly as the color index:
 
 ```cpp
-static UILabelState hpState = { "HP: 100", PL_GS_White, PALETTE_GRAYSCALE };
+static UILabel hpLabel(
+    4, 4, 96, 7,
+    "HP: 100",
+    PL_GS_White,
+    PALETTE_GRAYSCALE,
+    0,
+    UIAnchor::TopLeft
+);
 ```
 
 You can set colors anywhere using palette + enum combination like:

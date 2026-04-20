@@ -28,14 +28,14 @@ void Update() override {
 
 ## Controllers
 
-WolfEngine supports up to 4 simultaneous controllers. Each controller is configured independently in [Input Settings](../settings/input-settings.md).
+WolfEngine supports up to 4 simultaneous controllers. Each controller is configured independently in [Input Settings](../input.md).
 
 ```cpp
 Controller* p1 = Input().getController(0); // player 1
 Controller* p2 = Input().getController(1); // player 2
 ```
 
-`getController()` returns `nullptr` if the index is out of range or the controller is not enabled in settings. Always null-check before use if unsure:
+`getController()` expects indices in the `0..3` range. Passing an out-of-range index will trigger a debug assert. It returns `nullptr` for disabled controller slots. Always null-check before use if unsure:
 
 ```cpp
 Controller* p2 = Input().getController(1);
@@ -63,7 +63,7 @@ WolfEngine supports 10 buttons per controller:
 | I | `Button::I` |
 | J | `Button::J` |
 
-Each button can be wired to a direct GPIO pin, an expander pin, or left unassigned — all configured in [Input Settings](../settings/input-settings.md).
+Each button can be wired to a direct GPIO pin, an expander pin, or left unassigned — all configured in [Input Settings](../input.md).
 
 > **Note:** Button labels have no predefined meaning in the engine. They are just identifiers. Your controller may have ABXY, directions, or any other layout — wire them however you like and assign meaning in your game code.
 
@@ -112,7 +112,7 @@ float y = controller->getAxis(JoyAxis::Y);
 | `0.0` | Center or inside dead zone |
 | `+1.0` | Full positive (right / up) |
 
-Dead zone size and axis calibration are configured per controller in [Input Settings](../settings/input-settings.md). If a joystick axis is disabled, `getAxis()` always returns `0.0`.
+Dead zone size and axis calibration are configured per controller in [Input Settings](../input.md). If a joystick axis is disabled, `getAxis()` always returns `0.0`.
 
 ---
 
@@ -126,16 +126,16 @@ Buttons can be routed through any of the following I2C expanders instead of dire
 | PCF8575 | 16-bit, no registers | 0–15 | 0x20–0x27 |
 | MCP23017 | 16-bit, register-based | 0–15 | 0x20–0x27 |
 
-Expander type and address are configured per controller in [Input Settings](../settings/input-settings.md).
+Expander type and address are configured per controller in [Input Settings](../input.md).
 
 ---
 
 ## Debouncing
 
-All buttons across all controllers are automatically debounced in software. A button state change is only committed after the signal has remained stable for the duration defined by `debounceMs` in [Input Settings](../settings/input-settings.md). This prevents noise and contact bounce from registering false presses. Debounce timing is engine-wide and applies equally to all controllers.
+All buttons across all controllers are automatically debounced in software. A button state change is only committed after the signal has remained stable for the duration defined by `debounceMs` in [Input Settings](../input.md). This prevents noise and contact bounce from registering false presses. Debounce timing is engine-wide and applies equally to all controllers.
 
 ---
 
 ## Configuration
 
-All input routing, expander setup, joystick calibration, and controller enabling is done in `WE_Settings.hpp`. See [Input Settings](../settings/input-settings.md) for the full reference.
+All input routing, expander setup, joystick calibration, and controller enabling is done in `WE_Settings.hpp`. See [Input Settings](../input.md) for the full reference.

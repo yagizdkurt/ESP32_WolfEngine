@@ -29,7 +29,7 @@ public:
 
 ## Constructor and Destructor
 
-**Never add a constructor or destructor to your derived class.** Construction and destruction are specifically handled by the engine for registry purposes. If you add your own constructor or destructor, you can break these systems. Use `Start()` for initialization and, if you need cleanup, create an `End()` or similar function to handle quit states before calling destroy.
+Prefer putting gameplay initialization in `Start()` instead of constructors. Constructors/destructors are still part of normal C++ object lifetime, but heavy engine-dependent setup should happen in `Start()` once subsystems are initialized.
 
 ```cpp
 // ✅ Correct
@@ -62,13 +62,11 @@ Player* player = new Player();
 
 ## GameObject Registry
 
-Since WolfEngine runs on embedded systems, it doesn't have the storage capacities that a PC has. Thus, it handles object storage differently—small RAM, no heap. There is a cap for the number of game objects you can spawn. The cap can be increased, but we suggest leaving it at 64 or 128. It's defined in WE_Settings.hpp ([Settings](../settings.md)).
+WolfEngine keeps a fixed-size registry (`MAX_GAME_OBJECTS` in `WE_Settings.hpp`) and tracks active object pointers there.
 
-The registry is finite, and if you try to create more game objects than the registry has slots for, you will get a nullptr.
+The registry is finite. If your game creates many temporary objects, design with this cap in mind.
 
-`Create<T>()` returns `nullptr` if the registry is full—always check the return value if your game is creating many objects.
-
-So, if your code spawns a lot of game objects, make sure you check if its pointer actually exists. This is up to you since this is an embedded game engine and not C# or Python 😄
+If your code spawns many objects (projectiles, particles, enemies), monitor usage against `MAX_GAME_OBJECTS`.
 
 ---
 

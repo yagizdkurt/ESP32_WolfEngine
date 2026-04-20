@@ -46,6 +46,28 @@ section added. Do not delete entries from this file — strike-through is not su
 
 ---
 
+Panel Children Anchor Assumption
+Status: Active
+Severity: Medium
+Location: UIPanel.cpp — draw() offset pass-through; WE_BaseUIElement.hpp — resolveRect()
+What it is: Panel children must be constructed with UIAnchor::TopLeft for correct rendering. UIPanel::draw() passes its resolved screen position as offX/offY to each child's draw(), which adds it on top of the child's own anchor-resolved position. Any anchor other than TopLeft produces a screen-anchor origin that gets double-offset with the panel position, pushing children off-screen or to wrong positions.
+Impact: Users constructing panel children with any anchor other than UIAnchor::TopLeft will get silently wrong rendering with no error or warning. The default anchor is UIAnchor::Center, so any panel child created without explicitly specifying UIAnchor::TopLeft will be incorrectly positioned. This is a footgun in the public API.
+Maintenance note: The correct long-term fix is to have UIPanel::draw() bypass anchor resolution entirely for children — either by forcing TopLeft on children before calling draw(), or by passing absolute screen coordinates directly and having child draw() accept a pre-resolved position rather than re-resolving from their transform. Until fixed, any documentation or examples involving panels must explicitly specify UIAnchor::TopLeft on all children.
+
+---
+
+## One-Frame Position Lag in Sprite Rendering
+
+**Status:** Deferred  
+**Severity:** Low  
+**Location:** `src/WolfEngine/WolfEngine.cpp` — `gameTick()` tick ordering  
+**What it is:** `SpriteRenderer::tick()` submits draw commands during `componentTick()`, which runs before `Update()` and `camera.followTick()`. Commands are submitted with last frame's positions and camera state.  
+**Impact:** Sprites render one frame behind their actual game logic position. Invisible at 30fps for normal movement. Becomes noticeable with fast-moving objects, projectiles, or a physics debug overlay requiring current-frame accuracy.  
+**Maintenance note:** Fix requires splitting `render()` into `beginFrame()` before `componentTick` and `executeAndFlush()` after `camera.followTick()` in `gameTick()`. Defer until frame-accurate rendering is visibly needed.
+
+---
+
+
 ## Public Interfaces in Active Flux
 
 **Status:** Needs Investigation
@@ -78,18 +100,119 @@ or a value in `WE_RenderSettings`.
 
 ---
 
-## Coarse UI Dirty Tracking
+## Unconditional UI Pass with Coarse Dirty Tracking
+
+**Status:** Active
+**Severity:** Medium
+**Location:** `src/WolfEngine/Graphics/RenderSystem/WE_RenderCore.cpp`, `src/WolfEngine/Graphics/UserInterface/WE_UIManager.cpp`
+**What it is:** `Renderer::executeAndFlush()` calls `UI().render()` every frame,
+while `UIManager` still uses manager-level dirty tracking (`m_dirty`) and redraws all
+registered elements per `render()` call. Dirty state is tracked but no longer gates
+whether the UI pass runs.
+**Impact:** On small scenes the cost is acceptable, but UI-heavy screens now submit and
+execute UI commands every frame. This increases CPU work and command-buffer pressure,
+and can contribute to dropped commands if world and UI totals approach
+`MAX_DRAW_COMMANDS`.
+**Maintenance note:** If UI cost becomes visible, consider retained/cached UI commands
+or restoring a dirty-gated submission strategy.
+
+---
+
+## UIPanel Child Layer Overflow
+
+**Status:** Active
+**Severity:** Medium
+**Location:** `src/WolfEngine/Graphics/UserInterface/UIElements/UIPanel.cpp` — child layer patch in `draw()`
+**What it is:** Panel children are assigned `child->m_layer = m_transform->layer + 1`
+using `uint8_t`. If panel layer is 255, the value wraps to 0.
+**Impact:** Wrapped children can sort below panel background instead of above it,
+causing incorrect UI layering in edge-case layer configurations.
+**Maintenance note:** Saturate at max layer (`255`) before cast/assignment.
+
+---
+
+## Unchecked RenderLayer Cast from Raw UI Layer
+
+**Status:** Active
+**Severity:** Medium
+**Location:** `src/WolfEngine/Graphics/UserInterface/UIElements/WE_UILabel.cpp`, `src/WolfEngine/Graphics/UserInterface/UIElements/WE_UIShape.cpp`, `src/WolfEngine/Graphics/UserInterface/UIElements/UIPanel.cpp`
+**What it is:** UI code uses `static_cast<RenderLayer>(m_layer)` where `m_layer` is
+a raw `uint8_t`. Values outside defined `RenderLayer` enumerators are accepted silently.
+**Impact:** Invalid layer values can produce undefined behavior by language rules and
+non-deterministic ordering across toolchains/optimizations.
+**Maintenance note:** Validate/clamp `m_layer` before casting, or introduce a safe
+conversion helper.
+
+---
+
+## UIPanel Child DrawOrder Collisions Across Panels
 
 **Status:** Active
 **Severity:** Low
-**Location:** `src/WolfEngine/Graphics/UserInterface/WE_UIManager.cpp`
-**What it is:** `UIManager::render()` redraws all UI elements whenever any single
-element is marked dirty. There is no per-element or per-region dirty tracking.
-**Impact:** Tolerable on a 128×160 screen with a small number of elements. As UI
-element count grows, unnecessary redraws will consume increasing CPU time per frame,
-potentially pushing the engine below its target frame rate.
-**Maintenance note:** A per-element dirty flag or a dirty-region rect would contain
-the cost. Not worth addressing until UI complexity actually causes frame time issues.
+**Location:** `src/WolfEngine/Graphics/UserInterface/UIElements/UIPanel.cpp`, `src/WolfEngine/Graphics/UserInterface/WE_UIManager.cpp`
+**What it is:** Panel children are not assigned unique `m_drawOrder` values through
+`UIManager::setElements()`. They remain at default 0 unless explicitly patched.
+**Impact:** Children from different panels at the same layer share identical sort-key
+low bytes, so cross-panel ordering depends on submission sequence rather than explicit
+draw order.
+**Maintenance note:** Populate/restore per-child draw order in panel draw loop.
+
+---
+
+## Transient Child Layer State in UIPanel
+
+**Status:** Active
+**Severity:** Low
+**Location:** `src/WolfEngine/Graphics/UserInterface/UIElements/UIPanel.cpp`
+**What it is:** Child `m_layer` is patched only during `UIPanel::draw()` and restored
+afterward. Outside that window, the stored value may not reflect effective draw layer.
+**Impact:** Any future logic that reads `m_layer` outside draw execution may observe
+stale/placeholder values and make incorrect decisions.
+**Maintenance note:** Consider synchronizing child layer state in a persistent step
+(for example in manager sync/registration path).
+
+---
+
+## UILabel Width-Based Clipping Behavior Change
+
+**Status:** Active
+**Severity:** Medium
+**Location:** `src/WolfEngine/Graphics/UserInterface/UIElements/WE_UILabel.cpp`, `src/WolfEngine/Graphics/RenderSystem/WE_RenderCore.cpp` (`drawTextRunInternal`)
+**What it is:** `UILabel::draw()` now forwards `rect.width` as `TextRun.maxWidth`.
+Labels with non-zero transform width are clipped, whereas old behavior was unbounded.
+**Impact:** Existing labels that had non-zero width for layout reasons may display
+truncated text unexpectedly after migration.
+**Maintenance note:** Audit label transforms and document clipping semantics clearly in
+UI docs/API comments.
+
+---
+
+## Pass-Local Layer Ordering Can Mislead Users
+
+**Status:** Active
+**Severity:** Low
+**Location:** `src/WolfEngine/Graphics/RenderSystem/WE_RenderCore.cpp` — two-pass render flow
+**What it is:** World and UI are sorted/executed in separate passes with a buffer clear
+between passes. Layer values only order commands within a pass.
+**Impact:** A world command on a higher `RenderLayer` can still render before a UI
+command on a lower layer, which may surprise users expecting a single global layer
+space.
+**Maintenance note:** Keep this behavior documented wherever render layers are exposed.
+
+---
+
+## UITransform Aggregate Initialization Audit Gap
+
+**Status:** Needs Investigation
+**Severity:** Low
+**Location:** Engine-wide call sites that may use `UITransform tf = { ... }`
+**What it is:** `UITransform` field order changed during migration (layer and anchor
+positioning in struct/constructor). Constructor call sites were audited, but external
+or overlooked aggregate initializers may still rely on old field order.
+**Impact:** Misordered aggregate values can silently map into wrong fields (layer,
+anchor, margins), causing layout/layer bugs with no compiler diagnostics.
+**Maintenance note:** Perform a full repository + downstream-module audit for brace
+aggregate initialization usage.
 
 ---
 

@@ -1,70 +1,49 @@
-# 🐺 WolfEngine Wiki
+# WolfEngine Wiki
 
-Welcome to the official WolfEngine documentation. Use the sections below to navigate the wiki.
-
----
-
-## 🚀 Getting Started
-
-- [⚙️ Installation & Setup](getting-started/installation-and-setup.md)
-- [🎮 First GameObject](getting-started/first-gameobject.md)
+Welcome to the WolfEngine documentation. Use the sections below to navigate the current wiki structure.
 
 ---
 
-## 🔧 Core Systems
+## Getting Started
 
-- [🏠 Engine](core-systems/engine.md)
-- [🕹️ Input](core-systems/input.md)
-- [📷 Camera](core-systems/camera.md)
-- [🔊 Audio](core-systems/audio.md)
-- [🕐 Time & Timer](core-systems/time-and-timer.md)
+- [Installation and Setup](getting-started/installation-and-setup.md)
+- [First GameObject](getting-started/first-gameobject.md)
 
 ---
 
-## ⚙️ Modules
+## Core Systems
 
-- [💾 Save/Load](modules/save-load.md)
-
----
-
-## 🧩 GameObjects & Components
-
-- [🧱 GameObject](gameobjects-and-components/gameobject.md)
-- [📐 Transform](gameobjects-and-components/transform.md)
-- [🖼️ Sprite Renderer](gameobjects-and-components/sprite-renderer.md)
-- [🎬 Animator](gameobjects-and-components/animator.md)
+- [Engine](core-systems/engine.md)
+- [Input](core-systems/input.md)
+- [Audio](core-systems/audio.md)
+- [Time and Timer](core-systems/time-and-timer.md)
+- [UI Manager](core-systems/ui-manager.md)
+- [UI Panel](core-systems/uipanel.md)
+- [UI Label](core-systems/uilabel.md)
+- [Camera](core-systems/camera.md)
 
 ---
 
-## 🎨 Graphics
+## GameObjects and Components
 
-- [⚡ Renderer](graphics/renderer.md)
-- [🗂️ How To Setup Graphics](graphics/how-to-setup-graphics.md)
-- [🎨 Palette](graphics/palette.md)
-- [✏️ But How To Create Good Sprites!?](graphics/how-to-create-good-sprites.md)
-- [🟥 Direct Accessing The Buffer](graphics/buffer.md)
-
----
-
-## 🖥️ UI System
-
-- [🗂️ UI Manager](ui-system/ui-manager.md)
-- [📑 UI Panel](ui-system/ui-panel.md)
-- [🏷️ UI Label Element](ui-system/ui-label-element.md)
-- [✏️ Custom UI Elements](ui-system/custom-ui-elements.md)
+- [GameObject](gameobjects-and-components/gameobject.md)
+- [Transform](gameobjects-and-components/transform.md)
+- [Sprite Renderer](gameobjects-and-components/sprite-renderer.md)
+- [Animator](gameobjects-and-components/animator.md)
 
 ---
 
-## ⚙️ Engine Settings
+## Engine Configuration
 
-- [🔩 Settings](engine-settings/settings.md)
-- [📌 Pin Definitions](engine-settings/pin-definitions.md)
-- [🗃️ Layers](engine-settings/layers.md)
-- [🎛️ Input Settings](engine-settings/input-settings.md)
+- [General Settings](settings.md)
+- [Input Settings](input.md)
+- [Pin Definitions](pin-definitions.md)
+- [Render Layers](render-layers.md)
 
 ---
 
-## 🔌 Interfaces
+## Graphics
 
-- [💿 EEPROM](interfaces/eeprom.md)
-- [🔲 PCF Expander](interfaces/pcf-expander.md)
+- [How To Setup Graphics](graphics/how-to-setup-graphics.md)
+- [Palette](graphics/palette.md)
+- [Buffer](graphics/buffer.md)

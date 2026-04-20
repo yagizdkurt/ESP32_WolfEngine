@@ -24,18 +24,18 @@ WolfEngine/
 │   └── Components/
 │       ├── WE_BaseComp.hpp        # Abstract base: ComponentType enum, tick()
 │       ├── WE_Comp_Transform.hpp  # Position (Vec2) + width/height — always present on GO
-│       ├── WE_Comp_SpriteRenderer.hpp / .cpp  # Sprite asset + palette + rotation; auto-registers with RenderCore
+│       ├── WE_Comp_SpriteRenderer.hpp / .cpp  # Sprite asset + palette + rotation; submits DrawCommands each tick
 │       ├── WE_Comp_Collider.hpp / .cpp        # Box/Circle shapes; collision + trigger layer bitmasks
 │       ├── WE_Comp_Animator.hpp / .cpp        # Frame-strip animation driver on top of SpriteRenderer
 │       └── WE_Components.hpp      # Convenience include for all components
 │
 ├── Graphics/
 │   ├── RenderSystem/
-│   │   ├── WE_RenderCore.hpp / .cpp  # Framebuffer owner; layer management; sprite blit + rotation
+│   │   ├── WE_DrawCommand.hpp        # DrawCommand, DrawCommandType, and FrameDiagnostics
+│   │   ├── WE_RenderCore.hpp / .cpp  # Framebuffer owner; command buffer sort/execute + sprite blit
 │   │   └── WE_Camera.hpp / .cpp      # World↔screen transform; follow target; frustum cull
 │   ├── SpriteSystem/
 │   │   ├── WE_Sprite.hpp             # Sprite asset: pixel data (palette indices), constexpr factory
-│   │   ├── WE_SpriteData.hpp         # Render-ready struct passed from SpriteRenderer → RenderCore
 │   │   └── WE_SpriteRotation.hpp     # Rotation enum (R0 / R90 / R180 / R270)
 │   ├── ColorPalettes/                # Five built-in 32-entry RGB565 palettes; index 0 = transparent
 │   │   ├── WE_Palettes.hpp           # Convenience include
@@ -45,12 +45,12 @@ WolfEngine/
 │   │   ├── WE_Palette_Gameboy.hpp
 │   │   └── WE_Palette_Sunset.hpp
 │   └── UserInterface/
-│       ├── WE_UIManager.hpp / .cpp   # UI root: owns element array, dirty tracking, render dispatch
+│       ├── WE_UIManager.hpp / .cpp   # UI root: owns element array, dirty tracking, draw-order/layer assignment, render dispatch
 │       ├── Fonts/
 │       │   └── WE_Font.hpp           # 5×7 bitmap font for ASCII 32–126
 │       └── UIElements/
 │           ├── Base/
-│           │   ├── WE_BaseUIElement.hpp / .cpp  # Abstract element: show/hide, dirty flag, drawPixelRaw()
+│           │   ├── WE_BaseUIElement.hpp / .cpp  # Abstract element: show/hide, dirty flag, UITransform helpers, command-sort metadata
 │           │   ├── WE_UITransform.hpp            # Position, size, margins, UIAnchor enum (9 positions)
 │           │   └── WE_UITransformHelpers.hpp     # Anchor resolution math (resolveAnchor, resolveLayout)
 │           ├── WE_UILabel.hpp / .cpp   # Text label (32-char max, 5×7 font)

@@ -117,6 +117,9 @@ constexpr InputSettings INPUT_SETTINGS = {
 // =================== GAME OBJECT SETTINGS =======================
 #define MAX_GAME_OBJECTS 64
 
+// =================== UI SETTINGS =======================
+static constexpr uint8_t WE_UI_MAX_PANEL_CHILDREN = 10;
+
 
 #pragma region RenderSettings
 

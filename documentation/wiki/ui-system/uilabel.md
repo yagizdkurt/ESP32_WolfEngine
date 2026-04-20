@@ -1,156 +1,82 @@
 # UILabel
 
-UILabel is a text label UI element. It displays a string of up to 32 characters in the UI region using the built-in 5x7 bitmap font.
+`UILabel` renders text using the built-in 5x7 font.
 
 ---
 
 ## Declaration
 
-UILabel requires two parts — a `UITransform` in flash and a `UILabelState` in RAM.
-
 ```cpp
 #include "WolfEngine/Graphics/UserInterface/UIElements/WE_UIElements.hpp"
 
-// Flash — position never changes
-static const UITransform scoreTf = { 52, 12, true };
-//                                    x   y   anchor
+// Minimal
+static UILabel scoreLabel(4, 4, 96, 7, "Score: 0");
 
-// RAM — text and color can change at runtime
-static UILabelState scoreState = { "Score: 0" };
-
-// Label
-static UILabel scoreLabel(&scoreTf, &scoreState);
+// Full control
+static UILabel scoreLabelTopLeft(
+    4, 4, 96, 7,
+    "Score: 0",
+    PL_GS_White,
+    PALETTE_GRAYSCALE,
+    0,
+    UIAnchor::TopLeft
+);
 ```
 
-Then register it with the UIManager before `StartGame()`. See [UI Manager](../core-systems/ui-manager.md) for the full setup.
+Register with UI manager before `StartGame()`. See [UI Manager](ui-manager.md).
 
 ---
 
-## UITransform
-
-Defines where the label is drawn. Stored in flash as `const` — position cannot change at runtime.
+## Constructor
 
 ```cpp
-static const UITransform myTf = { x, y, anchor };
+UILabel(int16_t x, int16_t y, int16_t w, int16_t h,
+    const char* text = "",
+    uint8_t colorIndex = PL_GS_White,
+    const uint16_t* palette = PALETTE_GRAYSCALE,
+    uint8_t layer = 0,
+    UIAnchor anchor = UIAnchor::Center);
 ```
 
-| Field    | Type      | Description                                   |
-|----------|-----------|-----------------------------------------------|
-| `x`      | `int16_t` | Horizontal position in pixels                 |
-| `y`      | `int16_t` | Vertical position in pixels                   |
-| `anchor` | `bool`    | If `true`, y is relative to `RENDER_UI_START_ROW` |
+`UILabel` layout fields live on `BaseUIElement` (`x`, `y`, `w`, `h`, `layer`, `anchor`).
+The engine resolves anchored screen coordinates internally at draw time.
 
-**Anchor example:**
-```
-RENDER_UI_START_ROW = 128
-anchor = true,  y = 12  →  draws at screen row 140
-anchor = false, y = 12  →  draws at screen row 12
-```
+Current renderer behavior:
 
-Using `anchor = true` is recommended for UI labels — it keeps your Y coordinates relative to the UI region regardless of the `RENDER_UI_START_ROW` setting.
+- `UILabel::draw()` submits one `DrawCommandType::TextRun` command.
+- `rect.width` from `resolveLayout()` is passed as `maxWidth`.
+- `maxWidth = 0` means no clipping.
+- `maxWidth > 0` clips at command execution time.
 
 ---
 
-## UILabelState
+## Notes
 
-Mutable state stored in RAM. Text, color index, and palette can all change at runtime.
-
-```cpp
-struct UILabelState {
-    char            text[32];
-    uint8_t         colorIndex;  // defaults to PL_GS_White
-    const uint16_t* palette;     // defaults to PALETTE_GRAYSCALE
-};
-```
-
-Defaults are applied automatically so the simplest declaration is just:
-
-```cpp
-static UILabelState myState = { "Hello" };  // white text, grayscale palette
-```
-
-Override color and palette explicitly if needed:
-
-```cpp
-static UILabelState myState = { "Score: 0", PL_WM_Amber, PALETTE_WARM };
-```
+- `UILabelState` was removed from the public UI API.
+- Constructor text is copied with clamped `strncpy` and explicit null termination.
+- `UILabel` is not an aggregate type, so initialize it through its constructor.
 
 ---
 
-## Updating at Runtime
-
-### `setText(const char* text)`
-Updates the label text. Marks the label dirty so it redraws on the next frame.
+## Runtime API
 
 ```cpp
 scoreLabel.setText("Score: 42");
-```
+scoreLabel.setColorIndex(PL_GS_White);
 
-### `setColorIndex(uint8_t index)`
-Changes the color by swapping the palette index.
+scoreLabel.hide();
+scoreLabel.show();
 
-```cpp
-scoreLabel.setColorIndex(PL_GS_MidGray);  // dim the label
-scoreLabel.setColorIndex(PL_GS_White);    // restore full brightness
-```
-
-### `show()` / `hide()`
-Controls visibility without removing the element from the manager.
-
-```cpp
-scoreLabel.hide();  // invisible — skipped by renderer
-scoreLabel.show();  // visible again
-```
-
----
-
-## Getters
-
-```cpp
-scoreLabel.getText();        // const char*
-scoreLabel.getColorIndex();  // uint8_t
-scoreLabel.isVisible();      // bool
-scoreLabel.isDirty();        // bool
-```
-
----
-
-## Full Example
-
-```cpp
-static const UITransform  hpTf    = { 4,  4, true };
-static const UITransform  scoreTf = { 4, 18, true };
-
-static UILabelState hpState    = { "HP: 100",  PL_CL_Green,  PALETTE_COOL };
-static UILabelState scoreState = { "Score: 0", PL_GS_White,  PALETTE_GRAYSCALE };
-
-static UILabel hpLabel   (&hpTf,    &hpState);
-static UILabel scoreLabel(&scoreTf, &scoreState);
-
-static BaseUIElement* uiElements[] = { &hpLabel, &scoreLabel, nullptr };
-
-// In game code — update labels when values change:
-void onScoreChanged(int newScore) {
-    char buf[32];
-    snprintf(buf, 32, "Score: %d", newScore);
-    scoreLabel.setText(buf);
-}
-
-void onPlayerHurt(int hp) {
-    char buf[32];
-    snprintf(buf, 32, "HP: %d", hp);
-    hpLabel.setText(buf);
-
-    if (hp < 30) hpLabel.setColorIndex(PL_WM_PureRed);   // red when low
-    else         hpLabel.setColorIndex(PL_CL_Green);      // green when healthy
-}
+const char* t = scoreLabel.getText();
+uint8_t c = scoreLabel.getColorIndex();
+bool visible = scoreLabel.isVisible();
 ```
 
 ---
 
 ## Text Limits
 
-- Maximum text length is **32 characters** including the null terminator
-- Only printable ASCII characters (32–126) are supported
-- Characters outside this range are rendered as `?`
-- Font is fixed 5x7 pixels per character with 1px spacing
+- Max length is 32 bytes including null terminator
+- Printable ASCII (32-126) is supported
+- Out-of-range characters are skipped
+- Font is fixed-size 5x7 with spacing

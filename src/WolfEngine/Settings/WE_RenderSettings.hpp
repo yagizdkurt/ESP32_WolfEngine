@@ -43,3 +43,7 @@ struct RenderSettings {
     // Set to false to disable automatic clearing of the framebuffer each frame.
     bool cleanFramebufferEachFrame = true;
 };
+
+// Maximum number of DrawCommands that can be submitted per frame.
+// Tune this based on peak sprite count (check FrameDiagnostics::peakCommandCount).
+static constexpr uint16_t MAX_DRAW_COMMANDS = 128;

@@ -10,7 +10,7 @@ WolfEngine uses a set of settings files to configure the engine before compilati
 |---------------------|--------------------------------------------------------------|
 | `WE_Settings.hpp`   | Engine-wide settings — Input, frame rate, display target, renderer |
 | `WE_PINDEFS.hpp`    | SPI and display GPIO pin assignments — see [Pin Definitions](pin-definitions.md) |
-| `WE_RenderLayers.hpp` | Layer order for sprite rendering — see [Render Layers](render-layers.md) |
+| `WE_Layers.hpp`     | Layer order for sprite/collision systems — see [Render Layers](render-layers.md) |
 
 > These files live in `WolfEngine/Settings/`. Edit them to match your hardware and project needs before building.
 
@@ -32,9 +32,9 @@ Target frame time in microseconds. The engine tries to maintain this frame durat
 | 30  | 33333   |
 | 20  | 50000   |
 
-The real bottleneck is SPI, not the CPU. The ESP32 runs at 240 MHz and can execute game logic, physics, and rendering calculations in a fraction of a millisecond. However, flushing the framebuffer to the ST7735 over SPI at 10 MHz takes roughly 33 ms for a full 128x160 screen — which is almost exactly one frame at 30 FPS. This means pushing beyond 30 FPS on a full-screen flush is physically limited by the SPI bus, not the processor.
+The real bottleneck is SPI, not the CPU. The ESP32 can run gameplay logic quickly, but display transfer still dominates frame time for full-screen RGB565 updates.
 
-WolfEngine's partial flush optimization helps — when no UI has changed, only the game region (128x128) is sent, which takes around 26 ms and leaves more headroom. If you need higher frame rates, reducing `RENDER_UI_START_ROW` to shrink the game region or increasing `ST7735_SPI_CLOCK_HZ` in the display driver are the most effective levers.
+Current renderer behavior is a two-pass world+UI command execution followed by a full-screen flush every frame. If you need higher frame rates, the most effective lever is increasing display bus throughput (for example SPI clock and driver efficiency).
 
 ---
 
@@ -75,9 +75,15 @@ Selects which display driver the renderer compiles against. Only one should be d
 ```cpp
 constexpr RenderSettings RENDER_SETTINGS = {
     .defaultBackgroundPixel = 0x0000,
-    .gameRegion = { 0, 0, 128, 108 }
+    .gameRegion = { 0, 0, 128, 108 },
+    .spriteSystemEnabled = true,
+    .cleanFramebufferEachFrame = true
 };
+
+static constexpr uint16_t MAX_DRAW_COMMANDS = 128;
 ```
+
+`MAX_DRAW_COMMANDS` controls command buffer capacity per frame. If the buffer fills, extra commands are dropped and counted in renderer diagnostics (the renderer logs only the first drop in that frame).
 
 ### defaultBackgroundPixel:
 
@@ -95,5 +101,16 @@ Common values:
 
 ### gameRegion
 
-Rectangular area of the screen used for game rendering. `{ x1, y1, x2, y2 }`
-Outside this region will not be rendered per frame but will be rendered when UI gets dirty.
+Rectangular area used by world sprite clipping/culling. `{ x1, y1, x2, y2 }` (`x2` and `y2` are exclusive).
+
+`gameRegion` affects sprite drawing bounds. UI primitive commands are clipped to screen bounds, not `gameRegion`.
+
+### spriteSystemEnabled
+
+When `true`, `SpriteRenderer` components submit sprite draw commands during component tick.
+When `false`, `SpriteRenderer` submits nothing. The renderer still runs command sort/execute and UI/flush each frame.
+
+### cleanFramebufferEachFrame
+
+When `true`, the renderer clears the framebuffer to `defaultBackgroundPixel` at frame start.
+When `false`, previous frame pixels persist until overwritten.

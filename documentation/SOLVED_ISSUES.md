@@ -29,6 +29,30 @@ RESOLVED in <Phase> - <DD.MM.YY>
 
 -----------------------------------------------------------------------------------------
 
+## Diagnostics Counters Were Lifetime Totals, Not Per-Frame
+RESOLVED in Phase 4 - 19.04.26
+**Location:** `src/WolfEngine/Graphics/RenderSystem/WE_RenderCore.cpp` — `beginFrame()` diagnostics reset path; `src/WolfEngine/Graphics/RenderSystem/WE_DrawCommand.hpp` — `FrameDiagnostics` field comments
+**What it did:** `commandsSubmitted`, `commandsDropped`, and `commandsExecuted` previously behaved as lifetime totals in documentation, which made per-frame overlays require external diffing and caused confusion about expected values.
+**Resolution (Phase 4):** Diagnostics were aligned to per-frame behavior and documented accordingly:
+- `beginFrame()` resets `commandsSubmitted`, `commandsDropped`, and `commandsExecuted` every frame.
+- `peakCommandCount` remains a lifetime high watermark.
+- DrawCommand restructure docs now describe `commandsDropped` as a per-frame counter with throttled first-drop logging.
+**Extra Notes** This keeps frame diagnostics directly usable without caller-side snapshots/diffs.
+---
+
+## DrawCommand Struct Layout/Padding Risk
+RESOLVED in Phase 4 - 19.04.26
+**Location:** `src/WolfEngine/Graphics/RenderSystem/WE_DrawCommand.hpp`; `src/WolfEngine/Graphics/RenderSystem/WE_RenderCore.cpp`; `src/WolfEngine/Settings/WE_Layers.hpp`; `src/WolfEngine/ComponentSystem/Components/WE_Comp_SpriteRenderer.*`
+**What it did:** Old `DrawCommand` layout mixed separate `layer` + `sortKey`, rotation inside sprite payload, and wider types (`int` size field, signed layer backing) that increased padding risk and compare complexity in sort.
+**Resolution (Phase 4):** DrawCommand was restructured for compactness and single-key sort semantics:
+- `RenderLayer` backing type moved to `uint8_t` and sprite renderer layer storage was tightened accordingly.
+- `sortKey` now packs `RenderLayer` (high byte) + screenY (low byte) so sorting uses one compare.
+- Rotation moved into command `flags` (bits 7-6) with `cmdGetRotation` / `cmdSetRotation` helpers.
+- Sprite size narrowed to `uint8_t`, and reserved bytes were made explicit in sprite payload.
+- Sort loop now compares only packed `sortKey`, and overflow log spam was reduced to first drop per frame.
+**Extra Notes** The new layout targets a compact command footprint and cleaner extension for future command types.
+---
+
 ## getController(0) Always Returns Non-Null on SDL
 RESOLVED in Phase 3 - 17.04.26
 **Location:** `src/WolfEngine/InputSystem/WE_InputManager.cpp` — `getController()`
@@ -105,4 +129,5 @@ globals, no desktop-specific code in engine source:
 - `main_desktop.cpp` calls `Engine().RequestQuit()` on ESC/quit, then
   `engineThread.join()`, then destroys SDL objects in order before returning normally.
 - `std::exit(0)` is removed entirely.
+
 ---

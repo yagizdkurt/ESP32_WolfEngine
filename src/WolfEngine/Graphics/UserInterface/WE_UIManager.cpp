@@ -8,8 +8,9 @@ void UIManager::setElements(BaseUIElement** elements) {
 
     for (uint8_t i = 0; i < m_count; i++) {
         if (m_elements[i]) {
-            m_elements[i]->m_manager = this;
-            if (m_framebuffer) m_elements[i]->fb = m_framebuffer;
+            m_elements[i]->m_manager  = this;
+            m_elements[i]->m_drawOrder = i;
+            m_elements[i]->m_layer    = m_elements[i]->layer;
         }
     }
     if (m_framebuffer) m_dirty = true;
@@ -18,14 +19,12 @@ void UIManager::setElements(BaseUIElement** elements) {
 void UIManager::initialize(uint16_t* framebuffer) {
     m_framebuffer = framebuffer;
     if (m_elements) {
-        for (uint8_t i = 0; i < m_count; i++) if (m_elements[i]) m_elements[i]->fb = framebuffer;
         m_dirty = true;
     }
 }
 
 void UIManager::render() {
     if (!m_elements || !m_framebuffer) return;
-    for (uint8_t i = 0; i < m_count; i++) { if (m_elements[i]) m_elements[i]->draw(*this); }
+    for (uint8_t i = 0; i < m_count; i++) { if (m_elements[i]) m_elements[i]->draw(*this, 0, 0); }
     m_dirty = false;
 }
-

@@ -1,177 +1,80 @@
 # UIPanel
 
-UIPanel is a container UI element. It groups multiple `BaseUIElement` children and draws them relative to the panel origin. It can optionally render a background rectangle behind its children.
+`UIPanel` is a container UI element. It can draw a background rectangle and then draw child `BaseUIElement`s relative to the panel position.
 
 ---
 
 ## Declaration
 
-`UIPanel` requires two parts — a `UITransform` in flash and a `UIPanelState` in RAM.
-
 ```cpp
 #include "WolfEngine/Graphics/UserInterface/UIElements/WE_UIElements.hpp"
 
-// Flash — panel position
-static const UITransform panelTf = { 0, 108, false };
-
-// RAM — size and background settings
-static UIPanelState panelState = { 128, 20, true, 0x0000 };
-
-// Children (panel-local coordinates)
 static BaseUIElement* panelChildren[] = { &myLabel, &myShape, nullptr };
 
-// Panel
-static UIPanel panel(&panelTf, &panelState, panelChildren);
+static UIPanel panel(
+    0, -20, 128, 20,
+    panelChildren,
+    0x0000,
+    true,
+    1,
+    UIAnchor::BotLeft
+);
 ```
 
-Then register **only the panel** with the UIManager before `StartGame()`.
+Register only the panel in the top-level UI list:
 
 ```cpp
 static BaseUIElement* uiElements[] = { &panel, nullptr };
-engine.ui.setElements(uiElements);
+UI().setElements(uiElements);
 ```
 
-> **Important:** Child elements must **not** be registered separately.
+Do not register panel children separately in `uiElements`.
 
 ---
 
-## UIPanelState
-
-Mutable panel state stored in RAM.
+## Constructor
 
 ```cpp
-struct UIPanelState {
-    int16_t  width;
-    int16_t  height;
-    bool     backgroundEnabled;
-    uint16_t backgroundColor;
-};
-```
-
-| Field                | Description                  |
-|----------------------|------------------------------|
-| `width`              | Panel width in pixels        |
-| `height`             | Panel height in pixels       |
-| `backgroundEnabled`  | Enables background fill      |
-| `backgroundColor`    | RGB565 background color      |
-
-Example:
-
-```cpp
-static UIPanelState panelState = { 128, 20, true, 0x0000 };
+UIPanel(int16_t x, int16_t y, int16_t w, int16_t h,
+        BaseUIElement** ch = nullptr,
+        uint16_t background = 0x0000,
+        bool backgroundEnabled = true,
+        uint8_t layer = 0,
+        UIAnchor anchor = UIAnchor::Center);
 ```
 
 ---
 
-## Child Elements
+## Child List Rules
 
-Children are stored in a **null-terminated array**.
-
-```cpp
-static BaseUIElement* children[] = {
-    &hpLabel,
-    &scoreLabel,
-    nullptr
-};
-```
-
-Important rules:
-
-- Children use **panel-local coordinates**
-- The panel automatically offsets them when drawing
-- The array **must end with `nullptr`**
-
-Children are rendered **in array order**.
+1. Constructor input `ch` is a null-terminated pointer list.
+2. Constructor copies children into fixed storage: `children[WE_UI_MAX_PANEL_CHILDREN]`.
+3. Render order follows `children[]` index order.
+4. Register only the panel in top-level `UI().setElements(...)`; do not also register children.
 
 ---
 
-## Updating at Runtime
-
-### `setSize(int16_t width, int16_t height)`
-
-Changes the panel size.
+## Runtime API
 
 ```cpp
 panel.setSize(160, 24);
-```
-
-### `setBackgroundEnabled(bool enabled)`
-
-Enables or disables background rendering.
-
-```cpp
 panel.setBackgroundEnabled(true);
-panel.setBackgroundEnabled(false);
-```
-
-### `setBackgroundColor(uint16_t color)`
-
-Changes the background fill color.
-
-```cpp
-panel.setBackgroundColor(0xF800); // red
+panel.setBackgroundColor(0xF800);
 ```
 
 ---
 
-## Getters
+## Draw Behavior
 
-```cpp
-panel.getChildren();          // BaseUIElement**
-panel.getWidth();             // int16_t
-panel.getHeight();            // int16_t
-panel.isBackgroundEnabled();  // bool
-panel.getBackgroundColor();   // uint16_t
-```
+When `UIPanel::draw()` runs:
 
----
+1. Resolve panel position from current layout fields.
+2. Submit a `FillRect` command for panel background (if enabled and non-zero size).
+3. Iterate `children[]` and skip null entries.
+4. Temporarily patch child layer to `panel_layer + 1` so children sort above panel background.
+5. Call child `draw(...)` with `offX/offY` equal to the panel screen position.
+6. Restore child layer.
 
-## Rendering Behavior
+This gives panel-local positioning without transform-pointer patching.
 
-When the UI system calls `panel.draw()`:
-
-1. The panel reads its `UITransform` to determine its position.
-2. If `backgroundEnabled` is true, it draws the background rectangle.
-3. The panel iterates the `children` array.
-4. Each child’s transform is **temporarily offset by the panel position**.
-5. `child->draw()` is called.
-6. The child transform is restored.
-
-This allows children to use **panel-relative coordinates** while rendering in **absolute screen space**.
-
----
-
-## Full Example
-
-```cpp
-static const UITransform panelTf = { 0, 108, false };
-
-static UIPanelState panelState = { 128, 20, true, 0x0000 };
-
-static const UITransform hpTf    = { 4, 4, false };
-static const UITransform scoreTf = { 4, 14, false };
-
-static UILabelState hpState    = { "HP: 100" };
-static UILabelState scoreState = { "Score: 0" };
-
-static UILabel hpLabel   (&hpTf, &hpState);
-static UILabel scoreLabel(&scoreTf, &scoreState);
-
-static BaseUIElement* panelChildren[] = {
-    &hpLabel,
-    &scoreLabel,
-    nullptr
-};
-
-static UIPanel panel(&panelTf, &panelState, panelChildren);
-
-static BaseUIElement* uiElements[] = { &panel, nullptr };
-```
-
----
-
-## Notes
-
-- Children render **after the panel background**, so they always appear on top.
-- Rendering order of children is **array order**.
-- Panel z-order relative to other UI elements depends on the order used in `UIManager::setElements()`.
+Note: `UIPanelState` and `getChildren()` are no longer part of the public API.

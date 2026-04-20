@@ -1,56 +1,64 @@
 #include "WolfEngine/Graphics/RenderSystem/WE_RenderCore.hpp"
-#include "WolfEngine/Graphics/SpriteSystem/WE_SpriteData.hpp"
 #include "WolfEngine/Graphics/RenderSystem/WE_Camera.hpp"
+#include "WolfEngine/Graphics/UserInterface/Fonts/WE_Font.hpp"
 #include "WolfEngine/WolfEngine.hpp"
-#include <string.h>
+#include "esp_log.h"
+
+#ifndef IRAM_ATTR
+#define IRAM_ATTR
+#endif
 
 void Renderer::initialize() { m_driver->initialize(); }
 
-// -------------------------------------------------------------
-//  registerSprite
-//  Finds the first empty slot in the given layer and stores
-//  the sprite pointer. Called automatically by Sprite constructor
-//  via WolfEngine::getInstance().renderer.registerSprite()
-// -------------------------------------------------------------
-void Renderer::registerSprite(SpriteRenderer* sprite, int layer) {
-    for (int i = 0; i < MAX_GAME_OBJECTS; i++) {
-        if (m_layers[layer][i] == nullptr) {
-            m_layers[layer][i] = sprite;
-            return;
-        }
-    }
-}
 
 // -------------------------------------------------------------
-//  unregisterSprite
-//  Finds and nulls the sprite pointer in the given layer.
-//  Called automatically by Sprite destructor
-//  via WolfEngine::getInstance().renderer.unregisterSprite()
+//  clearCommands
+//  Resets the command buffer write pointer. Does not touch
+//  diagnostics — those are managed by beginFrame() and
+//  executeCommands() independently.
 // -------------------------------------------------------------
-void Renderer::unregisterSprite(SpriteRenderer* sprite, int layer) {
-    for (int i = 0; i < MAX_GAME_OBJECTS; i++) {
-        if (m_layers[layer][i] == sprite) {
-            m_layers[layer][i] = nullptr;
-            return;
-        }
-    }
+void Renderer::clearCommands() {
+    m_commandCount = 0;
 }
 
 
 // -------------------------------------------------------------
-//  drawSprite
-//  Internal helper — writes a single sprite into the framebuffer.
-//  Handles rotation index math, transparency, and per-pixel
-//  bounds checking to prevent out-of-bounds framebuffer writes.
+//  submitDrawCommand
+//  Called by SpriteRenderer (and future components) during the
+//  component-tick phase to enqueue a draw operation for this frame.
+//  Overflow is loud: dropped commands are counted and logged.
 // -------------------------------------------------------------
-void Renderer::drawSprite(const SpriteData& data, int screenX, int screenY) {
-    const int size = data.size;
+bool Renderer::submitDrawCommand(const DrawCommand& cmd) {
+    if (m_commandCount >= MAX_DRAW_COMMANDS) {
+        if (m_diagnostics.commandsDropped == 0) {
+            ESP_LOGW("Renderer", "Draw command buffer full — first drop this frame");
+        }
+        m_diagnostics.commandsDropped++;
+        return false;
+    }
+    
+    m_commandBuffer[m_commandCount++] = cmd;
+    m_diagnostics.commandsSubmitted++;
+    return true;
+}
+
+
+// -------------------------------------------------------------
+//  drawSpriteInternal
+//  Writes a single sprite into the framebuffer given unpacked
+//  command fields. Handles rotation index math, transparency,
+//  and per-pixel bounds checking against the game region.
+// -------------------------------------------------------------
+void IRAM_ATTR Renderer::drawSpriteInternal(int16_t x, int16_t y,
+                                   const uint8_t*  pixels,
+                                   const uint16_t* palette,
+                                   int size, Rotation rotation) {
     for (int py = 0; py < size; py++) {
         for (int px = 0; px < size; px++) {
 
             // Apply rotation — remap (px, py) to source pixel index
             int srcIndex;
-            switch (data.rotation) {
+            switch (rotation) {
                 case Rotation::R0:
                 default:
                     srcIndex = py * size + px;
@@ -67,19 +75,19 @@ void Renderer::drawSprite(const SpriteData& data, int screenX, int screenY) {
             }
 
             // Skip transparent pixels (index 0)
-            uint8_t paletteIndex = data.pixels[srcIndex];
+            uint8_t paletteIndex = pixels[srcIndex];
             if (paletteIndex == 0) continue;
 
             // Calculate screen pixel position
-            int drawX = screenX + px;
-            int drawY = screenY + py;
+            int drawX = x + px;
+            int drawY = y + py;
 
             // Per-pixel bounds check — clip to game region
             if (drawX < RENDER_SETTINGS.gameRegion.x1 || drawX >= RENDER_SETTINGS.gameRegion.x2) continue;
             if (drawY < RENDER_SETTINGS.gameRegion.y1 || drawY >= RENDER_SETTINGS.gameRegion.y2) continue;
 
             // Palette lookup and write to framebuffer
-            uint16_t color = data.palette[paletteIndex];
+            uint16_t color = palette[paletteIndex];
             if (m_driver->requiresByteSwap) color = (color >> 8) | (color << 8);
             m_framebuffer[drawY * RENDER_SCREEN_WIDTH + drawX] = color;
         }
@@ -88,57 +96,252 @@ void Renderer::drawSprite(const SpriteData& data, int screenX, int screenY) {
 
 
 // -------------------------------------------------------------
-//  drawGame
-//  Draws all game layers (LAYER_BACKGROUND through LAYER_FX)
-//  into the game region
-//  World positions are converted to screen via camera.
+//  drawFillRectInternal
+//  Fills a solid rectangle into the framebuffer.
+//  Clips to screen bounds; no gameRegion restriction.
 // -------------------------------------------------------------
-void Renderer::drawGame() {
-    for (int layer = 0; layer < static_cast<int>(RenderLayer::MAX_LAYERS); layer++) {
-        for (int i = 0; i < MAX_GAME_OBJECTS; i++) {
-
-            SpriteRenderer* sprite = m_layers[layer][i];
-            if (!sprite) continue;
-
-            SpriteData data = sprite->getRenderData();
-            if (!data.visible) continue;
-
-            // Cull sprites fully outside the game region
-            float margin = data.size * 0.5f;
-            if (!MainCamera().isVisible({(float)data.x, (float)data.y}, margin))
-                continue;
-
-            // Convert world position to screen position via camera
-            Vec2 screenPos = MainCamera().worldToScreen({(float)data.x, (float)data.y});
-
-            // Center the sprite on its position
-            int drawX = (int)screenPos.x - (data.size / 2);
-            int drawY = (int)screenPos.y - (data.size / 2);
-
-            drawSprite(data, drawX, drawY);
+void Renderer::drawFillRectInternal(int16_t x, int16_t y, uint8_t w, uint8_t h, uint16_t color) {
+    if (m_driver->requiresByteSwap) color = (color >> 8) | (color << 8);
+    for (int py = 0; py < h; py++) {
+        int drawY = y + py;
+        if (drawY < 0 || drawY >= RENDER_SCREEN_HEIGHT) continue;
+        for (int px = 0; px < w; px++) {
+            int drawX = x + px;
+            if (drawX < 0 || drawX >= RENDER_SCREEN_WIDTH) continue;
+            m_framebuffer[drawY * RENDER_SCREEN_WIDTH + drawX] = color;
         }
     }
 }
+
+
+// -------------------------------------------------------------
+//  drawLineInternal
+//  Bresenham's integer line algorithm.
+//  Clips each pixel to screen bounds before writing.
+// -------------------------------------------------------------
+void Renderer::drawLineInternal(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color) {
+    if (m_driver->requiresByteSwap) color = (color >> 8) | (color << 8);
+
+    int dx  =  (x2 > x1) ? (x2 - x1) : (x1 - x2);
+    int dy  = -((y2 > y1) ? (y2 - y1) : (y1 - y2));
+    int sx  = (x1 < x2) ? 1 : -1;
+    int sy  = (y1 < y2) ? 1 : -1;
+    int err = dx + dy;
+
+    int cx = x1, cy = y1;
+    while (true) {
+        if (cx >= 0 && cx < RENDER_SCREEN_WIDTH && cy >= 0 && cy < RENDER_SCREEN_HEIGHT)
+            m_framebuffer[cy * RENDER_SCREEN_WIDTH + cx] = color;
+        if (cx == x2 && cy == y2) break;
+        int e2 = 2 * err;
+        if (e2 >= dy) { err += dy; cx += sx; }
+        if (e2 <= dx) { err += dx; cy += sy; }
+    }
+}
+
+
+// -------------------------------------------------------------
+//  drawCircleInternal
+//  Midpoint circle algorithm.
+//  Outline: 8-way symmetry, one pixel per symmetric point.
+//  Filled: horizontal spans for each y offset pair.
+// -------------------------------------------------------------
+void Renderer::drawCircleInternal(int16_t cx, int16_t cy, uint8_t radius, uint16_t color, bool filled) {
+    if (m_driver->requiresByteSwap) color = (color >> 8) | (color << 8);
+
+    auto plot = [&](int px, int py) {
+        if (px >= 0 && px < RENDER_SCREEN_WIDTH && py >= 0 && py < RENDER_SCREEN_HEIGHT)
+            m_framebuffer[py * RENDER_SCREEN_WIDTH + px] = color;
+    };
+    auto hspan = [&](int lx, int rx, int py) {
+        if (py < 0 || py >= RENDER_SCREEN_HEIGHT) return;
+        int x0 = (lx < 0) ? 0 : lx;
+        int x1 = (rx >= RENDER_SCREEN_WIDTH) ? RENDER_SCREEN_WIDTH - 1 : rx;
+        for (int px = x0; px <= x1; px++)
+            m_framebuffer[py * RENDER_SCREEN_WIDTH + px] = color;
+    };
+
+    int x = radius, y = 0, err = 0;
+    while (x >= y) {
+        if (filled) {
+            hspan(cx - x, cx + x, cy + y);
+            hspan(cx - x, cx + x, cy - y);
+            hspan(cx - y, cx + y, cy + x);
+            hspan(cx - y, cx + y, cy - x);
+        } else {
+            plot(cx + x, cy + y); plot(cx - x, cy + y);
+            plot(cx + x, cy - y); plot(cx - x, cy - y);
+            plot(cx + y, cy + x); plot(cx - y, cy + x);
+            plot(cx + y, cy - x); plot(cx - y, cy - x);
+        }
+        y++;
+        err += 2 * y + 1;
+        if (2 * (err - x) + 1 > 0) { x--; err -= 2 * x + 1; }
+    }
+}
+
+
+// -------------------------------------------------------------
+//  drawTextRunInternal
+//  Rasterises a null-terminated string using the 5x7 built-in font.
+//  maxWidth clips total rendered width in pixels (0 = no clip).
+//  Out-of-ASCII-range characters (< 32 or > 126) are skipped.
+// -------------------------------------------------------------
+void Renderer::drawTextRunInternal(int16_t x, int16_t y, const char* text, uint16_t color, uint8_t maxWidth) {
+    if (!text) return;
+    if (m_driver->requiresByteSwap) color = (color >> 8) | (color << 8);
+
+    int16_t cursorX = x;
+    for (const char* p = text; *p; p++) {
+        uint8_t c = static_cast<uint8_t>(*p);
+        if (c < 32 || c > 126) continue;
+        if (maxWidth != 0 && (cursorX - x) + FONT_5x7_WIDTH > maxWidth) break;
+
+        const uint8_t* glyph = FONT_5x7[c - 32];
+        for (int col = 0; col < FONT_5x7_WIDTH; col++) {
+            uint8_t colBits = glyph[col];
+            for (int row = 0; row < FONT_5x7_HEIGHT; row++) {
+                if (colBits & (1 << row)) {
+                    int drawX = cursorX + col;
+                    int drawY = y + row;
+                    if (drawX >= 0 && drawX < RENDER_SCREEN_WIDTH &&
+                        drawY >= 0 && drawY < RENDER_SCREEN_HEIGHT)
+                        m_framebuffer[drawY * RENDER_SCREEN_WIDTH + drawX] = color;
+                }
+            }
+        }
+        cursorX += FONT_5x7_WIDTH + FONT_5x7_SPACING;
+    }
+}
+
+
+// -------------------------------------------------------------
+//  sortCommands
+//  Insertion sort — O(N) on nearly-sorted input (expected case),
+//  no heap allocation, safe on embedded targets.
+//  Single key: sortKey (ascending) — layer in high byte, screenY in low byte.
+// -------------------------------------------------------------
+void Renderer::sortCommands() {
+    for (int i = 1; i < m_commandCount; ++i) {
+        DrawCommand key = m_commandBuffer[i];
+        int j = i - 1;
+        while (j >= 0 && m_commandBuffer[j].sortKey > key.sortKey) {
+            m_commandBuffer[j + 1] = m_commandBuffer[j];
+            j--;
+        }
+        m_commandBuffer[j + 1] = key;
+    }
+}
+
+
+// -------------------------------------------------------------
+//  executeCommands
+//  Dispatches each buffered command to the appropriate draw call.
+// -------------------------------------------------------------
+void Renderer::executeCommands() {
+    for (uint16_t i = 0; i < m_commandCount; ++i) {
+        const DrawCommand& cmd = m_commandBuffer[i];
+        switch (cmd.type) {
+            case DrawCommandType::Sprite: {
+                Rotation rot = cmdGetRotation(cmd.flags);
+                drawSpriteInternal(cmd.x, cmd.y,
+                                   cmd.sprite.pixels,
+                                   cmd.sprite.palette,
+                                   cmd.sprite.size,
+                                   rot);
+                m_diagnostics.commandsExecuted++;
+                break;
+            }
+            case DrawCommandType::FillRect: {
+                drawFillRectInternal(cmd.x, cmd.y,
+                                     cmd.fillRect.w, cmd.fillRect.h, cmd.fillRect.color);
+                m_diagnostics.commandsExecuted++;
+                break;
+            }
+            case DrawCommandType::Line: {
+                drawLineInternal(cmd.x, cmd.y,
+                                 cmd.line.x2, cmd.line.y2, cmd.line.color);
+                m_diagnostics.commandsExecuted++;
+                break;
+            }
+            case DrawCommandType::Circle: {
+                drawCircleInternal(cmd.x, cmd.y,
+                                   cmd.circle.radius, cmd.circle.color,
+                                   cmd.circle.filled != 0);
+                m_diagnostics.commandsExecuted++;
+                break;
+            }
+            case DrawCommandType::TextRun: {
+                drawTextRunInternal(cmd.x, cmd.y,
+                                    cmd.textRun.text, cmd.textRun.color,
+                                    cmd.textRun.maxWidth);
+                m_diagnostics.commandsExecuted++;
+                break;
+            }
+            default:
+                ESP_LOGW("Renderer", "Unknown DrawCommandType — command skipped");
+                break;
+        }
+    }
+}
+
+
+// -------------------------------------------------------------
+//  beginFrame
+//  Clears the framebuffer to the background colour.
+//  Called once at the start of each frame before component ticks.
+// -------------------------------------------------------------
+void Renderer::beginFrame() {
+    // Reset diagnostics for this frame
+    m_diagnostics.commandsSubmitted = 0;
+    m_diagnostics.commandsDropped   = 0;
+    m_diagnostics.commandsExecuted  = 0;
+
+    // Clear framebuffer to background color if enabled in settings
+    if constexpr (RENDER_SETTINGS.cleanFramebufferEachFrame) {
+        constexpr uint16_t bg         = RENDER_SETTINGS.defaultBackgroundPixel;
+        constexpr uint16_t bgSwapped  = (bg >> 8) | (bg << 8);
+        const uint16_t fill = m_driver->requiresByteSwap ? bgSwapped : bg;
+        std::fill( m_framebuffer, m_framebuffer + m_driver->screenWidth * m_driver->screenHeight, fill );
+    }
+}
+
+
+// -------------------------------------------------------------
+//  executeAndFlush
+//  Two-pass render: world pass then UI pass. Each pass sorts,
+//  executes, updates peakCommandCount, and clears independently.
+//  Flush is always full-screen.
+// -------------------------------------------------------------
+void Renderer::executeAndFlush() {
+    // --- World pass ---
+    sortCommands();
+    executeCommands();
+    m_diagnostics.peakCommandCount =
+        (m_commandCount > m_diagnostics.peakCommandCount)
+        ? m_commandCount : m_diagnostics.peakCommandCount;
+    clearCommands();
+
+    // --- UI pass ---
+    UI().render();  // UI elements submit FillRect/Line/Circle/TextRun commands
+    sortCommands();
+    executeCommands();
+    m_diagnostics.peakCommandCount =
+        (m_commandCount > m_diagnostics.peakCommandCount)
+        ? m_commandCount : m_diagnostics.peakCommandCount;
+    clearCommands();
+
+    // --- Flush: always full screen ---
+    m_driver->flush(m_framebuffer, 0, 0,
+                    m_driver->screenWidth, m_driver->screenHeight);
+}
+
 
 // -------------------------------------------------------------
 //  render
 //  Master render function called every frame by WolfEngine.
 // -------------------------------------------------------------
 void Renderer::render() {
-    
-    if constexpr (RENDER_SETTINGS.cleanFramebufferEachFrame) {
-    uint16_t bg = RENDER_SETTINGS.defaultBackgroundPixel;
-    if (m_driver->requiresByteSwap) bg = (bg >> 8) | (bg << 8);
-    std::fill(m_framebuffer, m_framebuffer + m_driver->screenWidth * m_driver->screenHeight, bg);
-    }
-    
-    if constexpr (RENDER_SETTINGS.spriteSystemEnabled) drawGame(); // 2. Draw game region
-
-    // 3. Draw UI region — only if dirty
-    bool uiDirty = UI().isDirty();
-    if (uiDirty) UI().render();
-
-    // 4. Flush to display
-    if (uiDirty) { m_driver->flush(m_framebuffer, 0, 0, m_driver->screenWidth, m_driver->screenHeight); } 
-    else { m_driver->flush(m_framebuffer, RENDER_SETTINGS.gameRegion.x1, RENDER_SETTINGS.gameRegion.y1, RENDER_SETTINGS.gameRegion.x2, RENDER_SETTINGS.gameRegion.y2); }
+    beginFrame();
+    executeAndFlush();
 }

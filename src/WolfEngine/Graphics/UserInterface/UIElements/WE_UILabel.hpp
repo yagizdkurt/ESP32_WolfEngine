@@ -2,57 +2,46 @@
 #include <stdint.h>
 #include "Base/WE_BaseUIElement.hpp"
 
+#define WE_UI_LABEL_MAX_LEN 32
+
 // =============================================================
 //  WE_UILabel
-//  A text label UI element. Inherits position, visibility,
-//  dirty tracking, and palette from BaseUIElement.
+//  A text label UI element. Inherits layout fields from
+//  BaseUIElement (x, y, w, h, layer, anchor).
 //
-//  USAGE:
+//  USAGE (constructor-based):
 //
-//  // Flash - never changes
-//  constexpr UITransform transform = { 52, 12, true };  // anchor=true -> y=128+12=140
-//
-//  // RAM - changes at runtime
-//  UILabelState state = { "Score: 0", 1 };   // text, color index
-//
-//  // Element
-//  UILabel scoreLabel(&transform, &state, PALETTE_GRAYSCALE);
+//  static UILabel scoreLabel(
+//      52, 12, 60, 8,
+//      "Score: 0",
+//      PL_GS_White,
+//      PALETTE_GRAYSCALE,
+//      0,
+//      UIAnchor::TopLeft
+//  );
 //
 //  // Update at runtime
 //  scoreLabel.setText("Score: 42");
 //  scoreLabel.setColorIndex(3);
 // =============================================================
-
-#define WE_UI_LABEL_MAX_LEN 32
-
-// {text, color index, palette pointer}
-struct UILabelState {
-    char    text[WE_UI_LABEL_MAX_LEN];
-    uint8_t colorIndex = PL_GS_White; // default to white
-    const uint16_t* palette = PALETTE_GRAYSCALE; //default
-};
-
-// =============================================================
 class UILabel : public BaseUIElement {
 public:
-    // Create a label bound to transform and mutable state.
-    UILabel(const UITransform* transform, UILabelState* state);
+    char            text[WE_UI_LABEL_MAX_LEN] = {};
+    uint8_t         colorIndex                = PL_GS_White;
+    const uint16_t* palette                   = PALETTE_GRAYSCALE;
 
-    // Draw label text using current state values.
-    void draw(UIManager& mgr) override;
+    UILabel(int16_t x, int16_t y, int16_t w, int16_t h,
+            const char* text = "",
+            uint8_t colorIndex = PL_GS_White,
+            const uint16_t* palette = PALETTE_GRAYSCALE,
+            uint8_t layer = 0,
+            UIAnchor anchor = UIAnchor::Center);
 
-    // Update label text (clamped to max length) and mark dirty.
+    void draw(UIManager& mgr, int16_t offX = 0, int16_t offY = 0) override;
+
     void setText(const char* text);
-    // Update palette color index and mark dirty.
     void setColorIndex(uint8_t index);
 
-    // Read current label text.
-    const char* getText() const;
-    // Read current palette color index.
-    uint8_t getColorIndex() const;
-
-private:
-    UILabelState* m_state;
-
-    void drawChar(int16_t x, int16_t y, char c, uint16_t color);
+    const char* getText()       const;
+    uint8_t     getColorIndex() const;
 };

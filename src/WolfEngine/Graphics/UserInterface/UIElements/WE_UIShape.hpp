@@ -6,65 +6,55 @@
 // Basic shape kinds supported by UIShape.
 enum class UIShapeType : uint8_t { Rectangle, HLine, VLine, };
 
-// {width, height, color index, palette pointer, shape type, filled}
-struct UIShapeState {
-    int16_t         width      = 0;
-    int16_t         height     = 0;
-    uint8_t         colorIndex = PL_GS_White;
-    const uint16_t* palette    = PALETTE_GRAYSCALE;
-    UIShapeType     shape      = UIShapeType::Rectangle;
-    bool            filled     = true;
-};
-
 // =============================================================
 //  WE_UIShape
-//  A shape UI element. Inherits position, visibility,
-//  and dirty tracking from BaseUIElement.
+//  A shape UI element. Inherits layout fields from
+//  BaseUIElement (x, y, w, h, layer, anchor).
 //
-//  USAGE:
+//  USAGE (constructor-based):
 //
-//  // Flash - never changes
-//  constexpr UITransform transform = { 8, 10, true };  // anchor=true -> y=128+10=138
-//
-//  // RAM - changes at runtime
-//  UIShapeState state = { 40, 12, PL_GS_White, PALETTE_GRAYSCALE, UIShapeType::Rectangle, true };
-//
-//  // Element
-//  static UIShape panel(&transform, &state);
+//  static UIShape divider(
+//      4, 11, 120, 1,
+//      UIShapeType::HLine,
+//      true,
+//      PL_GS_White,
+//      PALETTE_GRAYSCALE,
+//      0,
+//      UIAnchor::TopLeft
+//  );
 //
 //  // Update at runtime
-//  panel.setSize(48, 14);
-//  panel.setColorIndex(2);
-//  panel.setFilled(false);
+//  divider.setLength(80);
+//  divider.setColorIndex(2);
 // =============================================================
 class UIShape : public BaseUIElement {
 public:
-    // Create a shape element bound to transform and mutable state.
-    UIShape(const UITransform* transform, UIShapeState* state);
+    UIShapeType     shape      = UIShapeType::Rectangle;
+    bool            filled     = true;
+    uint8_t         colorIndex = PL_GS_White;
+    const uint16_t* palette    = PALETTE_GRAYSCALE;
 
-    // Draw the configured shape.
-    void draw(UIManager& mgr) override;
+    UIShape(int16_t x, int16_t y, int16_t w, int16_t h,
+            UIShapeType shape = UIShapeType::Rectangle,
+            bool filled = true,
+            uint8_t colorIndex = PL_GS_White,
+            const uint16_t* palette = PALETTE_GRAYSCALE,
+            uint8_t layer = 0,
+            UIAnchor anchor = UIAnchor::Center);
 
-    // Set shape size and mark dirty.
+    void draw(UIManager& mgr, int16_t offX = 0, int16_t offY = 0) override;
+
     void setSize(int16_t width, int16_t height);
-    // Set palette color index and mark dirty.
     void setColorIndex(uint8_t index);
-    // Select which shape primitive to draw.
     void setShape(UIShapeType shape);
-    // Toggle filled/outline rendering for rectangles.
     void setFilled(bool filled);
-    // Set the active palette and mark dirty.
     void setPalette(const uint16_t* palette);
-    // Convenience for lines: sets width for HLine, height for VLine.
+    // Convenience for lines: sets w for HLine, h for VLine.
     void setLength(int16_t length);
 
-    // --- Const getters ---
     int16_t     getWidth()      const;
     int16_t     getHeight()     const;
     uint8_t     getColorIndex() const;
     bool        isFilled()      const;
     UIShapeType getShape()      const;
-
-private:
-    UIShapeState* m_state;
 };

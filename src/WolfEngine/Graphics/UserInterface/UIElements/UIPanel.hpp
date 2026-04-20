@@ -2,65 +2,50 @@
 #include <stdint.h>
 #include "Base/WE_BaseUIElement.hpp"
 
-
-// {width , height , background enabled, background color}
-struct UIPanelState {
-    int16_t  width             = 0;
-    int16_t  height            = 0;
-    bool     backgroundEnabled = false;
-    uint16_t backgroundColor   = 0;
-};
-
 // =============================================================
 //  UIPanel
 //  A container UI element that groups child BaseUIElements and
-//  renders them at positions relative to the panel's own origin.
+//  renders them offset by the panel's resolved screen position.
 //  Optionally fills a solid background before drawing children.
 //
-//  Children are positioned relative to the panel — their
-//  UITransform x/y are treated as offsets from the panel origin.
-//  The panel temporarily adjusts each child's transform during
-//  draw, then restores it. Children must NOT store their
-//  transform pointer across frames.
+//  Children are drawn with the panel's top-left corner as their
+//  coordinate origin — their x/y are treated as panel-relative
+//  offsets. No transform patching; offsets are passed directly
+//  to each child's draw() call.
 //
-//  USAGE:
+//  USAGE (constructor-based):
 //
-//  // Flash
-//  static const UITransform panelTf = { 0, 108, false };
+//  static BaseUIElement* panelChildren[] = { &myLabel, &myShape, nullptr };
 //
-//  // RAM
-//  static UIPanelState panelState = { 128, 20, true, 0x0000 };
+//  static UIPanel panel(
+//      0, -24, 128, 24,
+//      panelChildren,
+//      0x0000,
+//      true,
+//      1,
+//      UIAnchor::BotLeft
+//  );
 //
-//  // Children (null-terminated)
-//  static BaseUIElement* children[] = { &myLabel, &myShape, nullptr };
-//
-//  // Element
-//  static UIPanel panel(&panelTf, &panelState, children);
-//
-//  // Register with engine (panel registers, not children individually)
+//  // Register panel only — not children individually
 //  static BaseUIElement* uiElements[] = { &panel, nullptr };
-//  engine.ui.setElements(uiElements);
-//
-//  // Update at runtime
-//  panel.setBackgroundColor(0xF800);
-//  panel.setBackgroundEnabled(true);
+//  UI().setElements(uiElements);
 // =============================================================
 class UIPanel : public BaseUIElement {
 public:
-    UIPanel(const UITransform* transform, UIPanelState* state, BaseUIElement** children);
+    uint16_t       background        = 0x0000;
+    bool           backgroundEnabled = true;
+    BaseUIElement* children[WE_UI_MAX_PANEL_CHILDREN] = {};
 
-    void draw(UIManager& mgr) override;
+    UIPanel(int16_t x, int16_t y, int16_t w, int16_t h,
+            BaseUIElement** ch = nullptr,
+            uint16_t background = 0x0000,
+            bool backgroundEnabled = true,
+            uint8_t layer = 0,
+            UIAnchor anchor = UIAnchor::Center);
+
+    void draw(UIManager& mgr, int16_t offX = 0, int16_t offY = 0) override;
+
     void setSize(int16_t width, int16_t height);
     void setBackgroundEnabled(bool enabled);
     void setBackgroundColor(uint16_t color);
-
-    BaseUIElement** getChildren() const;
-
-private:
-    UIPanelState*   m_state;
-    BaseUIElement** m_children;
-
-    void drawBackground(UIManager& mgr, int16_t panelX, int16_t panelY);
-    void syncChildManagers();
-    void propagateDirtyToChildren();
 };

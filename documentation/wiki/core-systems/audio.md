@@ -103,7 +103,7 @@ Pins are defined in `WE_PINDEFS.hpp`:
 ```
 
 See:  
-➡ [Pin Definitions](../core-systems/pin-definitions.md)
+➡ [Pin Definitions](../pin-definitions.md)
 
 ---
 
@@ -163,4 +163,4 @@ bool isPlaying(const SoundClip* sound) const;
 
 ## Related Pages
 
-- [Pin Definitions](../core-systems/pin-definitions.md)
+- [Pin Definitions](../pin-definitions.md)

@@ -119,14 +119,16 @@ The I2C address is determined by the physical wiring of the **A0, A1, and A2** p
 > **Warning:** These are defaults for most expander chips. Make sure you look at your own chip for addresses.
 
 ### Expander Mapping
-To use an expander, set the `.type` and `.address` in the `expander` struct, then map the expander's physical pins to the engine's logical buttons (A–J).
+To use an expander, set the `.type` and `.addr` in the `expander` struct, then map the expander's physical pins to the engine's logical buttons (A–J).
 
 ```cpp
 .expander = {
     .type    = ExpanderType::MCP23017, // Select your chip
-    .address = 0x20,                   // Hardware address
+    .addr    = 0x20,                   // Hardware address
     .pins    = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 } // Maps expander P0-P9 to buttons A-J
 }
 ```
 
 > **Hybrid Wiring:** You can mix GPIO and Expander pins. If a button has both a gpioPins entry AND an expander.pins entry, the GPIO pin takes priority. Set unused slots to -1.
+
+> **Current behavior note:** `pollIntervalMs` exists in `InputSettings`, but input polling currently runs once per engine tick.

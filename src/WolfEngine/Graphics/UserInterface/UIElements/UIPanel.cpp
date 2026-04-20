@@ -1,82 +1,59 @@
 #include "UIPanel.hpp"
 #include "WolfEngine/Graphics/UserInterface/WE_UIManager.hpp"
+#include "WolfEngine/WolfEngine.hpp"
 
-UIPanel::UIPanel(const UITransform* transform, UIPanelState* state, BaseUIElement** children)
-    : BaseUIElement(transform), m_state(state), m_children(children) {}
-
-void UIPanel::setSize(int16_t width, int16_t height) {
-    m_state->width  = width;
-    m_state->height = height;
-    markDirty();
-    propagateDirtyToChildren();
-}
-
-void UIPanel::setBackgroundEnabled(bool enabled) {
-    m_state->backgroundEnabled = enabled;
-    markDirty();
-    propagateDirtyToChildren();
-}
-
-void UIPanel::setBackgroundColor(uint16_t color) {
-    m_state->backgroundColor = color;
-    markDirty();
-    propagateDirtyToChildren();
-}
-
-BaseUIElement** UIPanel::getChildren() const { return m_children; }
-
-void UIPanel::drawBackground(UIManager& mgr, int16_t panelX, int16_t panelY) {
-    if (!m_state->backgroundEnabled) return;
-    if (m_state->width <= 0 || m_state->height <= 0) return;
-
-    for (int16_t dy = 0; dy < m_state->height; ++dy) {
-        for (int16_t dx = 0; dx < m_state->width; ++dx) {
-            drawPixelRaw(panelX + dx, panelY + dy, m_state->backgroundColor);
-        }
+UIPanel::UIPanel(int16_t x, int16_t y, int16_t w, int16_t h,
+                 BaseUIElement** ch,
+                 uint16_t background,
+                 bool backgroundEnabled,
+                 uint8_t layer,
+                 UIAnchor anchor)
+{
+    this->x                 = x;
+    this->y                 = y;
+    this->w                 = w;
+    this->h                 = h;
+    this->layer             = layer;
+    this->anchor            = anchor;
+    this->background        = background;
+    this->backgroundEnabled = backgroundEnabled;
+    if (ch) {
+        for (uint8_t i = 0; i < WE_UI_MAX_PANEL_CHILDREN && ch[i]; ++i)
+            this->children[i] = ch[i];
     }
 }
 
-void UIPanel::syncChildManagers() {
-    if (!m_children) return;
+void UIPanel::setSize(int16_t width, int16_t height) { w = width; h = height; markDirty(); }
+void UIPanel::setBackgroundEnabled(bool enabled)      { backgroundEnabled = enabled; markDirty(); }
+void UIPanel::setBackgroundColor(uint16_t color)      { background = color; markDirty(); }
 
-    for (int16_t i = 0; m_children[i] != nullptr; ++i) {
-        BaseUIElement* child = m_children[i];
-        if (!child) continue;
-
-        child->m_manager = m_manager;
-    }
-}
-
-void UIPanel::propagateDirtyToChildren() {
-    // There is only manager-level dirty tracking in this UI system.
-    // Sync manager linkage so child updates can mark the UI dirty.
-    syncChildManagers();
-}
-
-void UIPanel::draw(UIManager& mgr) {
+void UIPanel::draw(UIManager& mgr, int16_t offX, int16_t offY) {
     if (!m_visible) return;
 
-    const int16_t panelX = getX();
-    const int16_t panelY = getY();
+    UIRect rect = resolveRect();
+    rect.x += offX;
+    rect.y += offY;
 
-    syncChildManagers();
-    drawBackground(mgr, panelX, panelY);
+    if (backgroundEnabled && w > 0 && h > 0) {
+        DrawCommand bg;
+        bg.type           = DrawCommandType::FillRect;
+        bg.flags          = 0;
+        bg.x              = rect.x;
+        bg.y              = rect.y;
+        bg.sortKey        = cmdMakeSortKey(static_cast<RenderLayer>(m_layer), m_drawOrder);
+        bg.fillRect.w     = static_cast<uint8_t>(w);
+        bg.fillRect.h     = static_cast<uint8_t>(h);
+        bg.fillRect.color = background;
+        RenderSys().submitDrawCommand(bg);
+    }
 
-    if (!m_children) return;
-
-    for (int16_t i = 0; m_children[i] != nullptr; ++i) {
-        BaseUIElement* child = m_children[i];
+    for (uint8_t i = 0; i < WE_UI_MAX_PANEL_CHILDREN; ++i) {
+        BaseUIElement* child = children[i];
         if (!child || child == this) continue;
-
-        const UITransform* original = child->m_transform;
-        if (!original) continue;
-
-        UITransform adjusted = *original;
-        adjusted.x = static_cast<int16_t>(adjusted.x + panelX);
-        adjusted.y = static_cast<int16_t>(adjusted.y + panelY);
-
-        child->m_transform = &adjusted;
-        child->draw(mgr);
-        child->m_transform = original;
+        child->m_manager   = m_manager;
+        uint8_t savedLayer = child->m_layer;
+        child->m_layer     = m_layer + 1;
+        child->draw(mgr, rect.x, rect.y);
+        child->m_layer     = savedLayer;
     }
 }

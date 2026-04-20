@@ -1,106 +1,109 @@
 # Renderer
 
-The Renderer is an internal WolfEngine system. It manages the framebuffer, sprite layer table, and drives the full draw and flush cycle every frame. You do not interact with it directly in game code — sprites register themselves automatically and the engine drives rendering each frame.
+The renderer owns the RGB565 framebuffer and a fixed-size per-frame `DrawCommand` buffer. Game systems submit commands; the engine executes rendering once per frame.
 
-This page explains how rendering works under the hood and how to add a custom display driver.
-
-❗ If you are looking for how to add graphics to your game, check [How To Setup Graphics](../graphics/how-to-setup-graphics.md) ❗
+If you are looking for gameplay usage, see [How To Setup Graphics](../graphics/how-to-setup-graphics.md).
 
 ---
 
 ## How Rendering Works
 
-Every frame the renderer executes four steps in order:
+Current frame pipeline is two-pass:
 
 **1. Clear**
-If `cleanFramebufferEachFrame` is enabled in [Settings](../settings.md), the framebuffer is filled with `defaultBackgroundPixel`. This erases everything drawn in the previous frame. Disable this if you are managing the framebuffer manually and want to retain previous frame contents.
+If `cleanFramebufferEachFrame` is enabled in [Settings](../settings.md), framebuffer is filled with `defaultBackgroundPixel`.
 
-**2. Draw Game Region**
-If `spriteSystemEnabled` is enabled in [Settings](../settings.md), all sprite layers from `LAYER_BACKGROUND` through `LAYER_FX` are iterated in order. Each sprite's world position is converted to screen coordinates via the camera, clipped to the game region, and written pixel-by-pixel into the framebuffer. Transparent pixels (palette index 0) are skipped. Sprites outside the game region are culled before drawing.
+**2. World Pass (sort + execute)**
+Commands buffered during component tick (mostly sprite commands) are sorted by `sortKey` and executed.
 
-**3. Draw UI Region**
-The UI region is only redrawn when something has changed — this is the dirty flag system. If no UI element has been modified since the last frame this step is skipped entirely. See [UI Manager](ui-manager.md) for details.
+**3. UI Pass (submit + sort + execute)**
+`UI().render()` is called every frame. UI elements submit `FillRect`, `Line`, `Circle`, and `TextRun` commands, then those commands are sorted and executed.
 
-**4. Flush to Display**
-The framebuffer is sent to the display over SPI. If the UI was redrawn, the full screen is flushed in one transfer. If only the game region changed, only the game region rectangle is sent — saving SPI bandwidth and keeping frame times lower.
-
----
-
-## Screen Regions
-
-The screen is divided into two independent regions:
-
-```
-(x1, y1)                   ┐
-  ...                      │  Game region — cleared and redrawn every frame
-(x2, y2)                   ┘
-
-                           ┐
-  Outside                  │  UI region — only redrawn when dirty
-                           ┘
-```
-
-The game region is a configurable rectangle defined by `{ x1, y1, x2, y2 }` in [Settings](../settings.md). The area below it is the UI region. The UI region retains its last drawn content until a UI element changes — at that point it is redrawn and a full screen flush occurs. This split means a static HUD costs almost nothing per frame in SPI bandwidth.
-
-See [Settings](../settings.md) to configure `gameRegion`.
+**4. Flush**
+Framebuffer is flushed once per frame as full-screen.
 
 ---
 
-## Sprite Layers
+## Command Types
 
-Sprites are sorted into layers which are drawn in ascending order — layer 0 is drawn first (bottom), the highest layer is drawn last (top). Layer assignment happens at sprite creation time and cannot be changed at runtime.
+`DrawCommandType` currently includes:
+- `Sprite`
+- `FillRect`
+- `Line`
+- `Circle`
+- `TextRun`
 
-See [Render Layers](../settings.md) for the full layer configuration.
+Sprites still clip to `RENDER_SETTINGS.gameRegion`. UI primitives clip to screen bounds.
+
+---
+
+## Layers and Ordering
+
+Within each pass, sorting is by ascending `sortKey`:
+- High byte: `RenderLayer`
+- Low byte: pass-local order key (`screenY` for sprites, draw order index for UI)
+
+Important:
+- World and UI are executed in separate passes.
+- `RenderLayer` does not interleave world and UI across passes.
+- UI pass always runs after world pass.
+
+See [Render Layers](../render-layers.md) for layer definitions.
+
+---
+
+## Command Buffer Capacity
+
+Capacity is `MAX_DRAW_COMMANDS` from render settings.
+
+- If the buffer fills, new commands are dropped.
+- Drops are counted in `commandsDropped`.
+- `peakCommandCount` tracks the high-watermark command count.
+
+```cpp
+const FrameDiagnostics& d = RenderSys().getDiagnostics();
+```
 
 ---
 
 ## Rotation
 
-The renderer supports four rotation states per sprite — `R0`, `R90`, `R180`, `R270`. Rotation is applied per-pixel at draw time by remapping the source pixel index. There is no rotation matrix — it is index arithmetic, so it has minimal overhead.
+Sprite rotation uses `DrawCommand.flags` bits 7-6 (`R0`, `R90`, `R180`, `R270`). Execution remaps source indices per pixel; no matrix math is used.
 
 ---
 
 ## Render Settings
 
-All rendering behaviour is configured in `WE_Settings.hpp`. Check [Settings](../settings.md) for more information.
+Renderer behavior is configured in `WE_RenderSettings.hpp` (included by `WE_Settings.hpp`). See [Settings](../settings.md).
 
 ---
 
 ## Advanced: Direct Framebuffer Access
 
-If you need pixel-level control, you can write directly to the framebuffer at any time:
+You can still write raw pixels:
 
 ```cpp
 uint16_t* fb = RenderSys().getCanvas();
 fb[y * RENDER_SCREEN_WIDTH + x] = 0xFFFF;
 ```
 
-This bypasses the sprite system entirely. See [Framebuffer Access](buffer.md) for full details and relevant render settings.
+This bypasses command submission for those writes. See [Framebuffer Access](../graphics/buffer.md).
 
 ---
 
 ## Advanced: Display Drivers
 
-The renderer is decoupled from the physical display through a `DisplayDriver` base class. The active driver is selected at compile time in [Settings](../settings.md):
+Display output is abstracted by `DisplayDriver`.
 
-```cpp
-#define DISPLAY_ST7735   // built-in ST7735 driver
-// #define DISPLAY_CUSTOM  // your own driver
-```
-
-**Built-in: ST7735**
-The default driver targets the ST7735 128x160 TFT over SPI. Pin assignments are configured in [Pin Definitions](pin-definitions.md).
-
-**Custom Driver**
-To use a different display, define `DISPLAY_CUSTOM` and implement the `DisplayDriver` interface in `Display_Custom.h`. Your driver must provide:
+Core driver interface:
 
 ```cpp
 void initialize();
 void flush(const uint16_t* framebuffer, int x1, int y1, int x2, int y2);
-int screenWidth;
-int screenHeight;
 ```
 
-`flush()` receives a pointer to the framebuffer and the region to send. The engine calls it once per frame with either the full screen or the game region only depending on whether the UI was dirty.
+Current renderer call uses full-screen bounds each frame.
 
-> **Note:** The ST7735 driver performs a byte swap on all pixel values before sending over SPI due to endianness differences between the ESP32 and the display. If you write a custom driver, be aware that palette colors are stored as logical RGB565 values — your driver is responsible for any byte ordering your display requires.
+Notes:
+- ST7735 path may require byte-swapped RGB565 (`requiresByteSwap = true`).
+- Desktop SDL path currently uploads/presents full framebuffer per flush.

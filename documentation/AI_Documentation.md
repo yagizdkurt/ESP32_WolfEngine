@@ -54,7 +54,7 @@ image. There are no processes, no IPC, no network services.
 | Entity-Component System | `GameObjectSystem` + `ComponentSystem` | Lightweight: no archetype tables, no dynamic dispatch via vtable arrays — components are owned by the GO and ticked via direct method calls |
 | Factory method | `GameObject::Create<T>()`, `Collider::Box()`, `Collider::Circle()`, `Sprite::Create()` | Hides construction details; `Create<T>` placement-news into a registry slot |
 | Abstract interface | `WE_Display_Driver`, `WE_IExpander`, `WE_IEEPROMDriver`, `WE_IInputProvider` | Lets driver selection be a compile-time `#if` in settings or a runtime enum dispatch; `IInputProvider` is injected at runtime via `setInputProvider()` |
-| Dirty flag | `WEUIManager`, `BaseUIElement` | UI skips redraw when nothing has changed |
+| Dirty flag | `WEUIManager`, `BaseUIElement` | Tracks UI changes at manager level; current renderer still runs UI pass every frame |
 | Triangular bitmask | `WEColliderManager` | Tracks per-pair collision state in O(n²/2) bits without a hash map |
 | Placement new | `WEController` for expander objects; `WE_SaveManager` for EEPROM driver objects | Avoids heap; concrete driver constructed into a `uint8_t` buffer sized to the largest concrete type |
 | Constexpr validation | `Sprite::Create()`, `WE_SaveManager` slot guards | Illegal dimensions / slot overflow / count mismatch caught at compile time, not runtime |
@@ -90,19 +90,22 @@ plus `ModuleSystem` for optional modules.
 
 **Public interface:**
 ```cpp
-void registerSprite(SpriteData*, RenderLayer);
-void unregisterSprite(SpriteData*);
-void render();                 // composites all layers → calls display flush
+uint16_t* getCanvas();
+bool submitDrawCommand(const DrawCommand& cmd);
+const FrameDiagnostics& getDiagnostics() const;
+void render();                 // clear -> world pass -> UI pass -> full-screen flush
 ```
 
 **Key design choices:**
 - Framebuffer is a flat `uint16_t` array of `width × height` pixels.
-- Five fixed layers (`BackGround → World → Entities → Player → FX`) drawn in order;
-  higher layers paint over lower.
-- Index 0 in any palette is transparent — `drawSprite()` skips those pixels.
-- Per-pixel bounds checking clips sprites to the camera's game region rectangle.
-- Rotation (0/90/180/270°) implemented by remapping pixel coordinates at blit time —
-  no intermediate buffer.
+- Draw operations are submitted as `DrawCommand` entries into a fixed per-frame buffer (`MAX_DRAW_COMMANDS`).
+- Commands are sorted by a packed `sortKey` (`uint16_t`) in each render pass.
+- World pass typically uses low byte as screenY; UI pass uses low byte as draw-order index.
+- Index 0 in any palette is transparent; sprite drawing skips those pixels.
+- Per-pixel bounds checking clips sprites to the configured game region.
+- UI rendering now submits `FillRect`, `Line`, `Circle`, and `TextRun` commands.
+- Overflow is explicit: extra commands are dropped and counted in diagnostics; logging is throttled to the first drop in a frame.
+- `spriteSystemEnabled` gates sprite command production in `SpriteRenderer::tick()`, not renderer execution.
 
 
 ---
@@ -165,7 +168,7 @@ virtual void OnTriggerEnter(GameObject*);
 | Component | Purpose |
 |---|---|
 | `TransformComponent` | Position + size. Always on every GO. |
-| `SpriteRendererComponent` | Binds a `Sprite` asset + palette to a render slot. Auto-registers/deregisters with `RenderCore`. |
+| `SpriteRendererComponent` | Binds a `Sprite` asset + palette and submits sprite `DrawCommand`s during component tick. |
 | `ColliderComponent` | Box or circle shape; collision + trigger layer bitmasks; offset from transform origin. |
 | `AnimatorComponent` | Drives `SpriteRenderer` frame index over time; play/pause; per-animation frame duration. |
 
@@ -233,13 +236,13 @@ float getAxis(JoyAxis a);       // -1.0 to 1.0
 ```cpp
 WEUIManager& UI();
 void setElements(BaseUIElement** nullTerminated);
-void render();   // called by engine each frame; skips if !dirty
+void render();   // called by engine each frame
 ```
 
 **Element hierarchy:**
 
 ```
-BaseUIElement  (show/hide, dirty flag, drawPixelRaw, UITransform)
+BaseUIElement  (show/hide, dirty flag, layout fields x/y/w/h/layer/anchor, command submit metadata)
 ├─ UILabel     (text string ≤32 chars, 5×7 font, palette color index)
 ├─ UIShape     (Rectangle / HLine / VLine, filled or outline)
 └─ UIPanel     (container with optional background; translates child coords)
@@ -248,9 +251,20 @@ BaseUIElement  (show/hide, dirty flag, drawPixelRaw, UITransform)
 **Key design choices:**
 - `UITransform` uses a `UIAnchor` enum (9 positions) + pixel offset. `resolveLayout()`
   converts anchor + margin to absolute screen coordinates at render time.
-- Dirty flag is per-element but UIManager currently re-renders **all** elements when
-  any one is dirty (see §12).
+- `UILabel`, `UIShape`, and `UIPanel` use explicit constructors for one-line declarations.
+- Legacy state structs (`UILabelState`, `UIShapeState`, `UIPanelState`) are not part of the public UI API.
+- C++20 designated initializers are not available for UI element classes because they are non-aggregate types.
+- Dirty state is manager-level change tracking. Current renderer executes a UI pass every frame, and UIManager draws all registered elements per pass.
 - Font is a static 5×7 bitmap array (`WE_Font.hpp`) covering ASCII 32–126.
+
+**Constructor snapshot:**
+```cpp
+static UILabel boot(4, 4, 120, 7, "Boot UI example");
+static UILabel panelTitle(4, 2, 120, 7, "WOLFENGINE UI TEST", PL_GS_White, PALETTE_GRAYSCALE, 0, UIAnchor::TopLeft);
+static UIShape panelDivider(4, 11, 120, 1, UIShapeType::HLine, true, PL_GS_White, PALETTE_GRAYSCALE, 0, UIAnchor::TopLeft);
+static BaseUIElement* panelChildren[] = { &panelTitle, &panelDivider, nullptr };
+static UIPanel panel(0, -24, 128, 24, panelChildren, 0x0000, true, 1, UIAnchor::BotLeft);
+```
 
 
 ---
@@ -283,10 +297,10 @@ bool isSFXPlaying();
 **Abstract interface (`WE_Display_Driver.hpp`):**
 ```cpp
 virtual void initialize() = 0;
-virtual void flush(uint16_t* framebuffer) = 0;
+virtual void flush(const uint16_t* framebuffer, int x1, int y1, int x2, int y2) = 0;
 virtual void setBacklight(uint8_t) {}   // optional
-virtual void sleep() {}                 // optional
-uint16_t screenWidth, screenHeight;
+virtual void sleep(bool) {}             // optional
+uint8_t screenWidth, screenHeight;
 bool requiresByteSwap;
 ```
 

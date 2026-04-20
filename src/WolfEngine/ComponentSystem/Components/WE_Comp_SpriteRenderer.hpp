@@ -1,18 +1,16 @@
 #pragma once
 #include <stdint.h>
 #include "WolfEngine/Graphics/SpriteSystem/WE_Sprite.hpp"
-#include "WolfEngine/Graphics/SpriteSystem/WE_SpriteData.hpp"
+#include "WolfEngine/Graphics/RenderSystem/WE_DrawCommand.hpp"
 #include "WolfEngine/Settings/WE_Layers.hpp"
 #include "WE_BaseComp.hpp"
-class GameObject;
-class Renderer;
 
 // =============================================================
 //  WE_Comp_SpriteRenderer.hpp
-//  The SpriteRenderer is the component the renderer talks to.
-//  It holds a pointer to a Sprite asset, owns palette, rotation,
-//  and visibility state, and registers itself with the renderer
-//  automatically on construction.
+//  The SpriteRenderer component submits a DrawCommand to the
+//  renderer each frame during the component-tick phase. It owns
+//  the sprite asset pointer, palette, rotation, and visibility
+//  state for the attached GameObject.
 //
 //  USAGE:
 //      // 1. Define pixel data in flash
@@ -28,26 +26,21 @@ class Renderer;
 //      };
 // =============================================================
 
-
 class SpriteRenderer : public Component {
 public:
 
-    // Construct and auto-register with the renderer.
+    // Construct and enable ticking to submit DrawCommands each frame.
     //
     // owner   — pointer to the owning GameObject (pass 'this')
     // sprite  — pointer to a constexpr Sprite asset in flash
     // palette — constexpr uint16_t[32] palette array in flash
-    // layer   — render layer, defaults to 0
+    // layer   — render layer, defaults to RenderLayer::Default
     SpriteRenderer(class GameObject*  owner,
                    const Sprite*      sprite,
                    const uint16_t*    palette,
                    RenderLayer        layer = RenderLayer::Default);
 
-    // Destructor automatically unregisters from the renderer.
-    ~SpriteRenderer();
-
-    // Returns all data the renderer needs to draw this sprite.
-    SpriteData getRenderData() const;
+    ~SpriteRenderer() = default;
 
     // ---------------------------------------------------------
     //  Runtime controls
@@ -77,21 +70,28 @@ public:
 
     // Show or hide without removing from the render layer.
     void setVisible(bool visible)            { m_visible  = visible;   }
+    void setSortKey(int16_t key) { m_sortKeyOverride = key; m_useSortKeyOverride = true; }
+    void clearSortKey()          { m_useSortKeyOverride = false; }
 
 
     const Sprite* getSprite()   const { return m_sprite;   }
     bool          isVisible()   const { return m_visible;  }
     Rotation      getRotation() const { return m_rotation; }
-    int16_t       getLayer()    const { return m_layer;    }
+    uint8_t       getLayer()    const { return m_layer;    }
 
 private:
+    void onDraw();
+    void tick() override;
+
     class GameObject*  m_owner;
     const Sprite*      m_sprite;
     const uint16_t*    m_palette;
-    int16_t            m_layer;
+    uint8_t            m_layer;
     Rotation           m_rotation = Rotation::R0;
+    bool               m_useSortKeyOverride = false;
+    int16_t            m_sortKeyOverride = 0;
     bool               m_visible  = true;
 
-    friend class Renderer;
     friend class Animator;
+    friend class GameObject; // for direct access to onDraw() during the render phase
 };
