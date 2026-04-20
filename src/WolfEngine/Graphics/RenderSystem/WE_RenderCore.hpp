@@ -64,6 +64,11 @@ private:
                             const uint8_t*  pixels,
                             const uint16_t* palette,
                             int size, Rotation rotation);
+    void clearCommands();
+    void drawFillRectInternal(int16_t x, int16_t y, uint8_t w, uint8_t h, uint16_t color);
+    void drawLineInternal(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color);
+    void drawCircleInternal(int16_t cx, int16_t cy, uint8_t radius, uint16_t color, bool filled);
+    void drawTextRunInternal(int16_t x, int16_t y, const char* text, uint16_t color, uint8_t maxWidth);
 
     DisplayDriver* m_driver;
     uint16_t m_framebuffer[RENDER_SCREEN_WIDTH * RENDER_SCREEN_HEIGHT];

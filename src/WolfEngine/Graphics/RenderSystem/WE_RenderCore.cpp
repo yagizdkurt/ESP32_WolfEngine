@@ -1,5 +1,6 @@
 #include "WolfEngine/Graphics/RenderSystem/WE_RenderCore.hpp"
 #include "WolfEngine/Graphics/RenderSystem/WE_Camera.hpp"
+#include "WolfEngine/Graphics/UserInterface/Fonts/WE_Font.hpp"
 #include "WolfEngine/WolfEngine.hpp"
 #include "esp_log.h"
 
@@ -8,6 +9,17 @@
 #endif
 
 void Renderer::initialize() { m_driver->initialize(); }
+
+
+// -------------------------------------------------------------
+//  clearCommands
+//  Resets the command buffer write pointer. Does not touch
+//  diagnostics — those are managed by beginFrame() and
+//  executeCommands() independently.
+// -------------------------------------------------------------
+void Renderer::clearCommands() {
+    m_commandCount = 0;
+}
 
 
 // -------------------------------------------------------------
@@ -84,6 +96,126 @@ void IRAM_ATTR Renderer::drawSpriteInternal(int16_t x, int16_t y,
 
 
 // -------------------------------------------------------------
+//  drawFillRectInternal
+//  Fills a solid rectangle into the framebuffer.
+//  Clips to screen bounds; no gameRegion restriction.
+// -------------------------------------------------------------
+void Renderer::drawFillRectInternal(int16_t x, int16_t y, uint8_t w, uint8_t h, uint16_t color) {
+    if (m_driver->requiresByteSwap) color = (color >> 8) | (color << 8);
+    for (int py = 0; py < h; py++) {
+        int drawY = y + py;
+        if (drawY < 0 || drawY >= RENDER_SCREEN_HEIGHT) continue;
+        for (int px = 0; px < w; px++) {
+            int drawX = x + px;
+            if (drawX < 0 || drawX >= RENDER_SCREEN_WIDTH) continue;
+            m_framebuffer[drawY * RENDER_SCREEN_WIDTH + drawX] = color;
+        }
+    }
+}
+
+
+// -------------------------------------------------------------
+//  drawLineInternal
+//  Bresenham's integer line algorithm.
+//  Clips each pixel to screen bounds before writing.
+// -------------------------------------------------------------
+void Renderer::drawLineInternal(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color) {
+    if (m_driver->requiresByteSwap) color = (color >> 8) | (color << 8);
+
+    int dx  =  (x2 > x1) ? (x2 - x1) : (x1 - x2);
+    int dy  = -((y2 > y1) ? (y2 - y1) : (y1 - y2));
+    int sx  = (x1 < x2) ? 1 : -1;
+    int sy  = (y1 < y2) ? 1 : -1;
+    int err = dx + dy;
+
+    int cx = x1, cy = y1;
+    while (true) {
+        if (cx >= 0 && cx < RENDER_SCREEN_WIDTH && cy >= 0 && cy < RENDER_SCREEN_HEIGHT)
+            m_framebuffer[cy * RENDER_SCREEN_WIDTH + cx] = color;
+        if (cx == x2 && cy == y2) break;
+        int e2 = 2 * err;
+        if (e2 >= dy) { err += dy; cx += sx; }
+        if (e2 <= dx) { err += dx; cy += sy; }
+    }
+}
+
+
+// -------------------------------------------------------------
+//  drawCircleInternal
+//  Midpoint circle algorithm.
+//  Outline: 8-way symmetry, one pixel per symmetric point.
+//  Filled: horizontal spans for each y offset pair.
+// -------------------------------------------------------------
+void Renderer::drawCircleInternal(int16_t cx, int16_t cy, uint8_t radius, uint16_t color, bool filled) {
+    if (m_driver->requiresByteSwap) color = (color >> 8) | (color << 8);
+
+    auto plot = [&](int px, int py) {
+        if (px >= 0 && px < RENDER_SCREEN_WIDTH && py >= 0 && py < RENDER_SCREEN_HEIGHT)
+            m_framebuffer[py * RENDER_SCREEN_WIDTH + px] = color;
+    };
+    auto hspan = [&](int lx, int rx, int py) {
+        if (py < 0 || py >= RENDER_SCREEN_HEIGHT) return;
+        int x0 = (lx < 0) ? 0 : lx;
+        int x1 = (rx >= RENDER_SCREEN_WIDTH) ? RENDER_SCREEN_WIDTH - 1 : rx;
+        for (int px = x0; px <= x1; px++)
+            m_framebuffer[py * RENDER_SCREEN_WIDTH + px] = color;
+    };
+
+    int x = radius, y = 0, err = 0;
+    while (x >= y) {
+        if (filled) {
+            hspan(cx - x, cx + x, cy + y);
+            hspan(cx - x, cx + x, cy - y);
+            hspan(cx - y, cx + y, cy + x);
+            hspan(cx - y, cx + y, cy - x);
+        } else {
+            plot(cx + x, cy + y); plot(cx - x, cy + y);
+            plot(cx + x, cy - y); plot(cx - x, cy - y);
+            plot(cx + y, cy + x); plot(cx - y, cy + x);
+            plot(cx + y, cy - x); plot(cx - y, cy - x);
+        }
+        y++;
+        err += 2 * y + 1;
+        if (2 * (err - x) + 1 > 0) { x--; err -= 2 * x + 1; }
+    }
+}
+
+
+// -------------------------------------------------------------
+//  drawTextRunInternal
+//  Rasterises a null-terminated string using the 5x7 built-in font.
+//  maxWidth clips total rendered width in pixels (0 = no clip).
+//  Out-of-ASCII-range characters (< 32 or > 126) are skipped.
+// -------------------------------------------------------------
+void Renderer::drawTextRunInternal(int16_t x, int16_t y, const char* text, uint16_t color, uint8_t maxWidth) {
+    if (!text) return;
+    if (m_driver->requiresByteSwap) color = (color >> 8) | (color << 8);
+
+    int16_t cursorX = x;
+    for (const char* p = text; *p; p++) {
+        uint8_t c = static_cast<uint8_t>(*p);
+        if (c < 32 || c > 126) continue;
+        if (maxWidth != 0 && (cursorX - x) + FONT_5x7_WIDTH > maxWidth) break;
+
+        const uint8_t* glyph = FONT_5x7[c - 32];
+        for (int col = 0; col < FONT_5x7_WIDTH; col++) {
+            uint8_t colBits = glyph[col];
+            for (int row = 0; row < FONT_5x7_HEIGHT; row++) {
+                if (colBits & (1 << row)) {
+                    int drawX = cursorX + col;
+                    int drawY = y + row;
+                    if (drawX >= 0 && drawX < RENDER_SCREEN_WIDTH &&
+                        drawY >= 0 && drawY < RENDER_SCREEN_HEIGHT)
+                        m_framebuffer[drawY * RENDER_SCREEN_WIDTH + drawX] = color;
+                }
+            }
+        }
+        cursorX += FONT_5x7_WIDTH + FONT_5x7_SPACING;
+    }
+}
+
+
+// -------------------------------------------------------------
 //  sortCommands
 //  Insertion sort — O(N) on nearly-sorted input (expected case),
 //  no heap allocation, safe on embedded targets.
@@ -120,7 +252,35 @@ void Renderer::executeCommands() {
                 m_diagnostics.commandsExecuted++;
                 break;
             }
-            // future types added here
+            case DrawCommandType::FillRect: {
+                drawFillRectInternal(cmd.x, cmd.y,
+                                     cmd.fillRect.w, cmd.fillRect.h, cmd.fillRect.color);
+                m_diagnostics.commandsExecuted++;
+                break;
+            }
+            case DrawCommandType::Line: {
+                drawLineInternal(cmd.x, cmd.y,
+                                 cmd.line.x2, cmd.line.y2, cmd.line.color);
+                m_diagnostics.commandsExecuted++;
+                break;
+            }
+            case DrawCommandType::Circle: {
+                drawCircleInternal(cmd.x, cmd.y,
+                                   cmd.circle.radius, cmd.circle.color,
+                                   cmd.circle.filled != 0);
+                m_diagnostics.commandsExecuted++;
+                break;
+            }
+            case DrawCommandType::TextRun: {
+                drawTextRunInternal(cmd.x, cmd.y,
+                                    cmd.textRun.text, cmd.textRun.color,
+                                    cmd.textRun.maxWidth);
+                m_diagnostics.commandsExecuted++;
+                break;
+            }
+            default:
+                ESP_LOGW("Renderer", "Unknown DrawCommandType — command skipped");
+                break;
         }
     }
 }
@@ -149,31 +309,31 @@ void Renderer::beginFrame() {
 
 // -------------------------------------------------------------
 //  executeAndFlush
-//  Sorts and executes all buffered DrawCommands, renders UI if
-//  dirty, flushes the framebuffer to the display, then resets
-//  the command buffer and updates the peak diagnostic.
+//  Two-pass render: world pass then UI pass. Each pass sorts,
+//  executes, updates peakCommandCount, and clears independently.
+//  Flush is always full-screen.
 // -------------------------------------------------------------
 void Renderer::executeAndFlush() {
+    // --- World pass ---
     sortCommands();
     executeCommands();
+    m_diagnostics.peakCommandCount =
+        (m_commandCount > m_diagnostics.peakCommandCount)
+        ? m_commandCount : m_diagnostics.peakCommandCount;
+    clearCommands();
 
-    m_diagnostics.peakCommandCount = (m_commandCount > m_diagnostics.peakCommandCount) ? m_commandCount : m_diagnostics.peakCommandCount;
-    m_commandCount = 0;
-    // commandsSubmitted / commandsDropped / commandsExecuted are running lifetime totals — not reset here.
+    // --- UI pass ---
+    UI().render();  // UI elements submit FillRect/Line/Circle/TextRun commands
+    sortCommands();
+    executeCommands();
+    m_diagnostics.peakCommandCount =
+        (m_commandCount > m_diagnostics.peakCommandCount)
+        ? m_commandCount : m_diagnostics.peakCommandCount;
+    clearCommands();
 
-    // UI region — only render and flush when dirty
-    bool uiDirty = UI().isDirty();
-    if (uiDirty) UI().render();
-
-    // Flush to display
-    if (uiDirty) {
-        m_driver->flush(m_framebuffer, 0, 0,
-                        m_driver->screenWidth, m_driver->screenHeight);
-    } else {
-        m_driver->flush(m_framebuffer,
-                        RENDER_SETTINGS.gameRegion.x1, RENDER_SETTINGS.gameRegion.y1,
-                        RENDER_SETTINGS.gameRegion.x2, RENDER_SETTINGS.gameRegion.y2);
-    }
+    // --- Flush: always full screen ---
+    m_driver->flush(m_framebuffer, 0, 0,
+                    m_driver->screenWidth, m_driver->screenHeight);
 }
 
 

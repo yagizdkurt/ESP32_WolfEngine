@@ -65,22 +65,24 @@ struct UITransform {
     int16_t  y;
     int16_t  width;
     int16_t  height;
+    uint8_t  layer;
+    UIAnchor anchor;
     int8_t   marginLeft;
     int8_t   marginRight;
     int8_t   marginTop;
     int8_t   marginBottom;
-    UIAnchor anchor;
 
     constexpr UITransform(
         int16_t x_ = 0, int16_t y_ = 0,
         int16_t w_ = 0, int16_t h_ = 0,
+        uint8_t layer_ = 0,
+        UIAnchor a = UIAnchor::Center,
         int8_t ml = 0, int8_t mr = 0,
-        int8_t mt = 0, int8_t mb = 0,
-        UIAnchor a = UIAnchor::Center)
+        int8_t mt = 0, int8_t mb = 0)
         : x(x_), y(y_), width(w_), height(h_),
+          layer(layer_), anchor(a),
           marginLeft(ml), marginRight(mr),
-          marginTop(mt), marginBottom(mb),
-          anchor(a) {}
+          marginTop(mt), marginBottom(mb) {}
 };
 
 // =============================================================
