@@ -12,22 +12,23 @@ Built with PlatformIO and ESP-IDF. No Unity. No Godot. Just you, your ESP32, and
 
 ## ✨ What It Can Do
 
-- 🎮 **GameObject & Component system** — component-based GameObjects with a clean `Start()` / `Update()` lifecycle. Transform is built in, attach components to build your dreams.
-- 🖼️ **Sprite rendering** — palette-indexed pixel art with rotation, layer-based draw order, and automatic registration with the renderer. Four snap rotations (0°, 90°, 180°, 270°) applied per-pixel at draw time with zero matrix math overhead. Sprites outside the visible area are culled before drawing.
-- 🎬 **Animation** — frame-by-frame sprite animation via the `Animator` component. Supports pause, resume, runtime frame swapping, and configurable playback speed — all at zero heap cost.
-- 🎨 **Palette system** — 5 built-in palettes (Grayscale, Warm, Cool, GameBoy, Sunset), each with 31 usable colors. Swap palettes at runtime for damage flash, color variants, day/night effects — it's just a pointer swap. Custom palettes are supported!
-- 🕹️ **Input & Multiplayer** — up to 4 simultaneous local controllers, each independently configured with its own buttons, joystick, and I2C expander. Buttons via direct GPIO or expanders (PCF8574, PCF8575, MCP23017), analog joystick with calibration and dead zone, software debouncing built in.
-- 🔊 **Sound** — supports 2 seperate buzzers for music and sfx. Has note system built in. Using PWM to generate 8bit style musics and sfx. Looping and callbacks included!
-- 💾 Save/Load System (EEPROM) — More info at modules section.
-- 📷 **Camera** — smooth follow targeting, configurable follow speed, zoom, and world↔screen coordinate conversion. Sprites outside the visible area are culled before drawing.
-- 🖥️ **UI system** — text labels anchored to a dedicated UI region at the bottom of the screen. Dirty-flag system means the UI region is only redrawn and flushed when something actually changes.
-- ⚡ **Partial screen flush** — when the UI hasn't changed, only the game region is sent over SPI. Less data, faster frames.
-- 🔌 **Custom display driver** — built-in ST7735 support out of the box, but the renderer talks to a `DisplayDriver` interface. Swap in your own driver for any display you like.
-- 🧠 **Flash-friendly memory model** — sprite pixel data and palettes live in flash as `constexpr` arrays. Zero RAM cost for graphics data.
-- 🧩 **Module System** — optional engine subsystems you opt into at compile time. Pay only for what you use.
+- 🖥️ **Faster creative iteration (SDL3)** — Test and tune gameplay on desktop before deploying to hardware.
+- 🎮 **Optimized for embedded systems** — Boots fast, updates smoothly, and feels responsive.
+- 🎮 **GameObject + Component architecture** — Component-based objects with a clean `Start()` / `Update()` lifecycle.
+- 🖼️ **Sprite rendering** — 90° rotations, layer sorting, camera-aware culling, and predictable draw order for crisp pixel visuals on small displays.
+- 🎬 **Animations** — frame-by-frame animation with pause/resume, runtime frame swapping, and configurable frame timing.
+- 🎨 **Palettes** — 5 customizable palettes with runtime swapping for effects like hit flash, day/night transitions, and scene mood changes.
+- 🕹️ **Flexible controller inputs** — supports GPIO and I2C expanders, with joystick calibration, deadzone handling, and software debouncing.
+- 👥 **Multiplayer (up to 4)** — multiple players can jump in and play together on the same setup.
+- 📷 **Camera system** — smooth follow behavior, world-to-screen conversion, and visibility-aware rendering.
+- 🔊 **Dual-channel audio system** — PWM-based music and SFX with looping and callback support.
+- 🧠 **Flash-friendly asset model** — sprites, palettes, and settings are stored in flash to preserve RAM.
+- 🖥️ **Anchored UI layout** — constructor-based UI with anchored layout and hierarchical rendering.
+- 🧰 **Display-driver abstraction** — ST7735 for esp32, SDL3 for desktop and custom driver support for all your other screens.
+- 🧩 **Compile-time module system** — include only the systems you need and keep the binary lean.
 
 ## 🧩 Current Modules
-- 💾 Save/Load System (EEPROM) — flexible EEPROM-backed persistence with support for custom partition tables. Define your own data layouts using structs, and let the SaveLoadManager handle serialization and deserialization automatically. Designed for predictable memory usage and fast access, with full control over how and where your data is stored.
+- 💾 **EEPROM Save/Load module** — Compile-time typed slots and integrity validation.
 
 ---
 
