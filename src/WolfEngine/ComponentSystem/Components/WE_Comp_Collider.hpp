@@ -1,6 +1,5 @@
 #pragma once
 #include "WolfEngine/Settings/WE_Settings.hpp"
-
 #if defined(WE_MODULE_COLLISION)
 
 #include <stdint.h>

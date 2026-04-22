@@ -1,6 +1,6 @@
+#include "WE_Comp_Collider.hpp"
 #if defined(WE_MODULE_COLLISION)
 
-#include "WE_Comp_Collider.hpp"
 #include "WolfEngine/Modules/CollisionSystem/WE_CollisionModule.hpp"
 
 // Private constructor

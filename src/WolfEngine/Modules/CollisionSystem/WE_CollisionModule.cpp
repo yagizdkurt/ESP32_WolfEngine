@@ -1,6 +1,6 @@
+#include "WE_CollisionModule.hpp"
 #if defined(WE_MODULE_COLLISION)
 
-#include "WE_CollisionModule.hpp"
 #include "WolfEngine/ComponentSystem/Components/WE_Comp_Collider.hpp"
 #include <string.h>
 

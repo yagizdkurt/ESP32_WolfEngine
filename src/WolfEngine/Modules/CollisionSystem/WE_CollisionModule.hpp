@@ -1,9 +1,9 @@
 #pragma once
+#include "WolfEngine/Settings/WE_Settings.hpp"
 #if defined(WE_MODULE_COLLISION)
 
 #include <stdint.h>
 #include "WolfEngine/Modules/WE_IModule.hpp"
-#include "WolfEngine/Settings/WE_Settings.hpp"
 
 class Collider;
 
