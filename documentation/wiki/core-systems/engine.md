@@ -42,16 +42,34 @@ extern "C" void app_main() {
 
 ## Tick Order
 
-Inside the running loop, sound is updated continuously. A full game tick is executed whenever elapsed time reaches `Settings.render.targetFrameTimeUs`:
+Inside the running loop, `gameLoop()` runs continuously. Each iteration performs:
 
-1. Input tick
-2. Module update
-3. Component tick for active objects (SpriteRenderer submits draw commands here)
-4. `Update()` for active objects
-5. Collider manager tick
-6. Camera follow tick
-7. Renderer render/flush (clear -> world pass -> UI pass -> full-screen flush)
-8. `WETime::incrementFrameCount()`
+1. `SoundManager::update()`
+2. `ModuleSystem::FreeUpdate()`
+3. A full `gameTick()` only when elapsed time reaches `Settings.render.targetFrameTimeUs`
+
+`gameTick()` phase order:
+
+1. Early phase
+    - Input tick
+    - `EarlyUpdate()` for active objects
+    - `earlyComponentTick()` for active objects
+    - `ModuleSystem::EarlyUpdate()`
+2. Main phase
+    - `Update()` for active objects
+    - `componentTick()` for active objects
+    - `ModuleSystem::Update()`
+3. Late phase
+    - `LateUpdate()` for active objects
+    - `lateComponentTick()` for active objects
+    - `ModuleSystem::LateUpdate()`
+    - Camera follow tick
+    - Collider manager tick (legacy path)
+4. End phase
+    - `preRenderComponentTick()` for active objects
+    - `ModuleSystem::PreRender()`
+    - Renderer render/flush (clear -> world pass -> UI pass -> full-screen flush)
+    - `WETime::incrementFrameCount()`
 
 Renderer step detail (current):
 - World pass: sort + execute currently buffered world commands
@@ -60,7 +78,7 @@ Renderer step detail (current):
 
 Frame pacing is currently done by elapsed-time gating, not by explicit sleep.
 
-Because sprite commands are submitted in step 3 but movement/camera updates happen in steps 4 and 6, sprite rendering uses previous-frame transform/camera state.
+Because render runs at the end phase, movement/camera logic is completed before final flush.
 
 ---
 

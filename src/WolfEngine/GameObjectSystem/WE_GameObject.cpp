@@ -14,7 +14,7 @@ bool GameObject::CreateObject() {
     return false; // Didnt find an empty slot. For whatever reason.
 }
 
-GameObject::GameObject(){}
+GameObject::GameObject() {}
 GameObject::~GameObject() {}
 
 void GameObject::DestroyGameObject(GameObject *gameObject) {
@@ -39,8 +39,26 @@ void GameObject::registerComponent(Component* comp) {
     m_components[m_componentCount++] = comp;
 }
 
+void GameObject::earlyComponentTick() {
+    for (int i = 0; i < m_componentCount; i++) 
+        if (m_components[i] && m_components[i]->earlyTickEnabled) 
+            m_components[i]->earlyTick();
+}
+
 void GameObject::componentTick() {
-    for (int i = 0; i < m_componentCount; i++) {
-        if (m_components[i] && m_components[i]->tickEnabled) m_components[i]->tick();
-    }
+    for (int i = 0; i < m_componentCount; i++) 
+        if (m_components[i] && m_components[i]->tickEnabled) 
+            m_components[i]->tick();
+}
+
+void GameObject::lateComponentTick() {
+    for (int i = 0; i < m_componentCount; i++)
+        if (m_components[i] && m_components[i]->lateTickEnabled) 
+            m_components[i]->lateTick();
+}
+
+void GameObject::preRenderComponentTick() {
+    for (int i = 0; i < m_componentCount; i++)
+        if (m_components[i]) 
+            m_components[i]->preRenderTick();
 }

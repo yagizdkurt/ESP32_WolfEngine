@@ -64,8 +64,8 @@ public:
 private:
     std::atomic<bool> m_isRunning{false};
     GameObjectRegistry m_GameObjectRegistry = {};
+    int64_t lastFrameTime = 0;
     
-    void gameTick();
     WolfEngine() :
     m_renderer(GetDriver()),
     m_Camera(),
@@ -73,6 +73,9 @@ private:
     m_SoundManager(),
     m_ColliderManager()
     {}
+
+    void gameLoop();
+    void gameTick();
 
     friend class GameObject;
 };

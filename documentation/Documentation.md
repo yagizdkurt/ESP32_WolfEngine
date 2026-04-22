@@ -78,23 +78,40 @@ loop. Without it nothing starts and nothing ticks.
 **Public interface:**
 ```cpp
 WolfEngine& Engine();          // global accessor
-void StartEngine();            // one-time hardware init → core subsystems → ModuleRegistry::InitAll()
+void StartEngine();            // one-time hardware init -> core subsystems -> ModuleSystem::InitAll()
 void StartGame();              // blocking game loop
 ```
 
+**Game loop (`StartGame()` -> `gameLoop()`):**
+1. `lastFrameTime` is initialized once.
+2. `while (IsRunning()) gameLoop();` drives runtime.
+3. `gameLoop()` runs continuously:
+   - `SoundManager::update()` every loop iteration
+   - `ModuleSystem::FreeUpdate()` every loop iteration
+   - executes `gameTick()` only when elapsed time reaches `Settings.render.targetFrameTimeUs`
+
 **Frame tick order (`gameTick()`):**
 1. `InputManager::tick()` — poll buttons / joysticks
-2. `ModuleSystem::UpdateAll()` — tick all registered modules
-3. `GameObject::componentTick()` for each active object — component logic before game logic (`SpriteRenderer` submits draw commands here)
-4. `GameObject::Update()` for each active object — user game logic
-5. `ColliderManager::tick()` — collision detection + events
-6. `Camera::followTick()` — camera follow after movement
-7. `Renderer::render()` — clear framebuffer + world pass (sort/execute) + UI pass (submit/sort/execute) + full-screen flush
+2. For each active `GameObject`: `EarlyUpdate()`
+3. For each active `GameObject`: `earlyComponentTick()`
+4. `ModuleSystem::EarlyUpdate()`
+5. For each active `GameObject`: `Update()`
+6. For each active `GameObject`: `componentTick()`
+7. `ModuleSystem::Update()`
+8. For each active `GameObject`: `LateUpdate()`
+9. For each active `GameObject`: `lateComponentTick()`
+10. `ModuleSystem::LateUpdate()`
+11. `Camera::followTick()`
+12. `ColliderManager::tick()` (legacy path, planned to be moved to module flow)
+13. For each active `GameObject`: `preRenderComponentTick()`
+14. `ModuleSystem::PreRender()`
+15. `Renderer::render()` — clear framebuffer + world pass (sort/execute) + UI pass (submit/sort/execute) + full-screen flush
+16. `WETime::incrementFrameCount()`
 
-Because sprite commands are submitted in step 3, but movement/camera updates happen in steps 4 and 6, sprites render using previous-frame transform/camera state.
+Because sprite commands are submitted during component ticks and render runs at the end phase, world movement/camera logic completes before final flush.
 
 **Key dependencies:** All core subsystems (renderer, camera, input, UI, sound, colliders)
-plus `ModuleRegistry` for optional modules.
+plus `ModuleSystem` for optional modules.
 
 ---
 
@@ -374,14 +391,14 @@ from `ExpanderSettings.type` at controller init time.
 
 ### 6.13 Module System
 
-**Why it exists:** Provides a structured way to add optional engine subsystems that need `OnInit()` / `OnUpdate()` / `OnShutdown()` lifecycle hooks. All modules are listed in one place (`WE_ModuleSystem.cpp`) under compile-time feature flags; the engine calls them in priority order.
+**Why it exists:** Provides a structured way to add optional engine subsystems that need phase-aware lifecycle hooks. All modules are listed in one place (`WE_ModuleSystem.cpp`) under compile-time feature flags; the engine calls them in priority order.
 
 **Key files:**
 
 | File | Role |
 |---|---|
 | `Modules/WE_IModule.hpp` | `IModule` base all modules must inherit; `TModule<T, Priority>` CRTP helper |
-| `Modules/WE_ModuleSystem.hpp` | `ModuleSystem` class with `InitAll/UpdateAll/ShutdownAll` |
+| `Modules/WE_ModuleSystem.hpp` | `ModuleSystem` class with `InitAll/EarlyUpdate/Update/LateUpdate/PreRender/FreeUpdate/ShutdownAll` |
 | `Modules/WE_ModuleSystem.cpp` | All module instances and the pointer list live here |
 | `Settings/WE_Settings.hpp` | Compile-time module feature flags (`#define WE_MODULE_SAVELOAD`, etc.) |
 
@@ -395,16 +412,25 @@ public:
     static T& Get();   // returns the one instance
 protected:
     TModule(const char* name);
-    virtual void OnInit()     {}
-    virtual void OnUpdate()   {}
-    virtual void OnShutdown() {}
+   virtual void OnReferenceCollection() {}
+   virtual void OnInit()                {}
+   virtual void OnEarlyUpdate()         {}
+   virtual void OnUpdate()              {}
+   virtual void OnLateUpdate()          {}
+   virtual void OnPreRender()           {}
+   virtual void OnFreeUpdate()          {}
+   virtual void OnShutdown()            {}
 };
 ```
 
 **`ModuleSystem` — called only by the engine:**
 ```cpp
-ModuleSystem::InitAll();       // sorts by priority (descending), then OnInit() — once in StartEngine()
-ModuleSystem::UpdateAll();     // OnUpdate() each module — once per frame in gameTick()
+ModuleSystem::InitAll();        // sort + reference collection + init
+ModuleSystem::EarlyUpdate();    // OnEarlyUpdate() in gameTick early phase
+ModuleSystem::Update();         // OnUpdate() in gameTick main phase
+ModuleSystem::LateUpdate();     // OnLateUpdate() in gameTick late phase
+ModuleSystem::PreRender();      // OnPreRender() before renderer.flush
+ModuleSystem::FreeUpdate();     // OnFreeUpdate() every gameLoop iteration
 ModuleSystem::ShutdownAll();   // OnShutdown() in reverse priority order
 ```
 
@@ -504,24 +530,43 @@ When you add/remove/reorder fields in a save struct, increment `WE_SAVE_VERSION`
 ### Flow A — Frame render cycle
 
 ```
-1. StartGame() busy-waits until `Settings.render.targetFrameTimeUs` (33 333 us at 30 fps by default) has elapsed.
+1. StartGame() initializes `lastFrameTime`, then runs `while (IsRunning()) gameLoop()`.
 
-2. WEInputManager::tick()
+2. gameLoop() runs continuously:
+   a. SoundManager::update()
+   b. ModuleSystem::FreeUpdate()
+   c. if elapsed >= targetFrameTimeUs -> gameTick()
+
+3. gameTick() Early phase:
+   a. WEInputManager::tick()
+   b. For each active GameObject: EarlyUpdate()
+   c. For each active GameObject: earlyComponentTick()
+   d. ModuleSystem::EarlyUpdate()
+
+4. gameTick() Main phase:
+   a. For each active GameObject: Update()
+   b. For each active GameObject: componentTick()
+   c. ModuleSystem::Update()
+
+5. gameTick() Late phase:
+   a. For each active GameObject: LateUpdate()
+   b. For each active GameObject: lateComponentTick()
+   c. ModuleSystem::LateUpdate()
+   d. Camera::followTick()
+   e. WEColliderManager::tick() (legacy path)
+
+6. gameTick() End phase:
+   a. For each active GameObject: preRenderComponentTick()
+   b. ModuleSystem::PreRender()
+   c. WERenderCore::render()
+   d. WETime::incrementFrameCount()
+
+7. Input tick details:
    └─ For each controller: poll GPIO or I²C expander pins
       → debounce → update button state bitmasks
       → read ADC channels → normalise joystick axes
 
-3. ModuleSystem::UpdateAll()
-   └─ Calls OnUpdate() on every module in priority order
-      (e.g. WE_SaveManager::OnUpdate() — currently a no-op, reserved for future use)
-
-4. For each active GameObject in registry:
-   └─ componentTick() — ticks all enabled components (Animator, Collider, etc.)
-
-5. For each active GameObject in registry:
-   └─ Update() — calls user game logic (virtual override)
-
-6. WEColliderManager::tick()
+8. Collider tick details:
    └─ For every pair (i, j) of registered colliders:
       a. Apply layer bitmask filter — skip if no interaction
       b. Run shape intersection test (AABB / circle / mixed)
@@ -529,9 +574,7 @@ When you add/remove/reorder fields in a save struct, increment `WE_SAVE_VERSION`
       d. Fire OnCollisionEnter / Stay / Exit  or  OnTriggerEnter / Stay / Exit
          directly on both GameObjects
 
-7. Camera::followTick() — lerp camera toward follow target's new position
-
-8. WERenderCore::render()
+9. Render details:
    └─ Clear framebuffer (if `Settings.render.cleanFramebufferEachFrame` is true)
    └─ World pass:
       a. sortCommands()

@@ -23,45 +23,49 @@ void WolfEngine::StartEngine() {
 
 void WolfEngine::StartGame() {
     m_isRunning = true;
-    int64_t lastFrameTime = esp_timer_get_time();
+    lastFrameTime = esp_timer_get_time();
     for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj) obj->callStart();
 
-    while (IsRunning()) {
-        int64_t now     = esp_timer_get_time();
-        int64_t elapsed = now - lastFrameTime;
+    // Main game loop
+    while (IsRunning()) gameLoop();
+}
 
-        m_SoundManager.update();
+void WolfEngine::gameLoop() {
+    int64_t now     = esp_timer_get_time();
+    int64_t elapsed = now - lastFrameTime;
 
-        // Only tick if enough time has passed for a 30fps frame
-        if (elapsed >= Settings.render.targetFrameTimeUs) {
-            lastFrameTime = now;
-            gameTick();
-        }
+    m_SoundManager.update();
+    ModuleSystem::FreeUpdate();
+
+    if (elapsed >= Settings.render.targetFrameTimeUs) { //30fps frame
+        lastFrameTime = now;
+        gameTick();
     }
 }
 
 // Main Game Loop Tick - called every frame
 void WolfEngine::gameTick() {
-    // Update input states first
-    m_InputManager.tick();
+    // ---- Early Phase ----
+    m_InputManager.tick(); // Update input states first
+    for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj && obj->isActive) obj->EarlyUpdate(); // EarlyUpdate for game objects before main logic
+    for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj && obj->isActive) obj->earlyComponentTick(); // Early tick for components before game logic
+    ModuleSystem::EarlyUpdate(); // Early update for modules before game logic
 
-    // Update engine modules
-    ModuleSystem::UpdateAll();
+    // ---- Main Phase ----
+    for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj && obj->isActive) obj->Update(); // Main update for game objects
+    for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj && obj->isActive) obj->componentTick(); // Main tick for components
+    ModuleSystem::Update(); // Main update for modules after game logic
 
-    // Update component ticks of each object before Update() so that components can modify object state before game logic runs
-    for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj && obj->isActive) obj->componentTick();
+    // ---- Late Phase ----
+    for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj && obj->isActive) obj->LateUpdate(); // LateUpdate for game objects after main logic
+    for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj && obj->isActive) obj->lateComponentTick(); // Late tick for components after main logic
+    ModuleSystem::LateUpdate(); // Late update for modules after game logic
+    m_Camera.followTick(); // Update camera after game logic so follow targets are at their new position
+    m_ColliderManager.tick(); // Depriciated, will be removed soon.
 
-    // Update logic of each object
-    for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj && obj->isActive) obj->Update();
-
-    // Evaluate collider interactions after movement/logic updates.
-    m_ColliderManager.tick();
-
-    // Update camera after game logic so follow targets are at their new position
-    m_Camera.followTick();
-
-    // Render the scene
-    m_renderer.render();
-
-    WETime::incrementFrameCount();
+    // ---- End Phase ----
+    for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj && obj->isActive) obj->preRenderComponentTick(); // PreRender tick for components before rendering
+    ModuleSystem::PreRender(); // PreRender for modules before rendering
+    m_renderer.render(); // Render the scene
+    WETime::incrementFrameCount(); // Increment frame count at the end of the tick so it reflects completed frames
 }

@@ -3,7 +3,13 @@
 class ModuleSystem {
 private:
     friend class WolfEngine;
+
     static void InitAll();
-    static void UpdateAll();
     static void ShutdownAll();
+    
+    static void EarlyUpdate();
+    static void Update();
+    static void LateUpdate();
+    static void PreRender();
+    static void FreeUpdate();
 };

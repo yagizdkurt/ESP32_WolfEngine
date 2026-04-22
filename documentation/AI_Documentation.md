@@ -77,7 +77,7 @@ image. There are no processes, no IPC, no network services.
 **Public interface:**
 ```cpp
 WolfEngine& Engine();          // global accessor
-void StartEngine();            // one-time hardware init → core subsystems → ModuleRegistry::InitAll()
+void StartEngine();            // one-time hardware init -> core subsystems -> ModuleSystem::InitAll()
 void StartGame();              // blocking game loop
 ```
 
@@ -345,8 +345,8 @@ from `ExpanderSettings.type` at controller init time.
 
 | File | Role |
 |---|---|
-| `Modules/WE_IModule.hpp` | `IModule` base: `Name`/`Priority` public fields, private `OnInit/OnUpdate/OnShutdown`; `TModule<T, Priority>` CRTP helper |
-| `Modules/WE_ModuleSystem.hpp` | `ModuleSystem` class: declares `InitAll/UpdateAll/ShutdownAll` (only `WolfEngine` may call them) |
+| `Modules/WE_IModule.hpp` | `IModule` base: `Name`/`Priority` public fields, private phase hooks (`OnInit`, `OnEarlyUpdate`, `OnUpdate`, `OnLateUpdate`, `OnPreRender`, `OnFreeUpdate`, `OnShutdown`); `TModule<T, Priority>` CRTP helper |
+| `Modules/WE_ModuleSystem.hpp` | `ModuleSystem` class: declares `InitAll/EarlyUpdate/Update/LateUpdate/PreRender/FreeUpdate/ShutdownAll` (only `WolfEngine` may call them) |
 | `Modules/WE_ModuleSystem.cpp` | Owns all module instances and the `IModule*[]` list; `InitAll` sorts then calls hooks |
 | `Settings/WE_Settings.hpp` | Feature flags — `#define WE_MODULE_SAVELOAD`, etc. Controls which `#if` blocks compile |
 
@@ -358,9 +358,14 @@ public:
     const int         Priority;
 private:
     friend class ModuleSystem;
-    virtual void OnInit()     {}
-    virtual void OnUpdate()   {}
-    virtual void OnShutdown() {}
+  virtual void OnReferenceCollection() {}
+  virtual void OnInit()                {}
+  virtual void OnShutdown()            {}
+  virtual void OnEarlyUpdate()         {}
+  virtual void OnUpdate()              {}
+  virtual void OnLateUpdate()          {}
+  virtual void OnFreeUpdate()          {}
+  virtual void OnPreRender()           {}
 };
 
 template<typename T, int Priority>
@@ -372,7 +377,7 @@ protected:
 };
 ```
 
-`OnInit/OnUpdate/OnShutdown` are private — only `ModuleSystem` (friended) can invoke them.
+All lifecycle hooks are private — only `ModuleSystem` (friended) can invoke them.
 `TModule<T, Priority>` bakes the priority into the `IModule::Priority` field at construction
 and provides the typed `Get()` accessor. The constructor is private to the subclass, preventing
 external instantiation.
@@ -392,13 +397,17 @@ static IModule* s_modules[] = {
 };
 ```
 `InitAll()` runs an insertion sort on `s_modules` by `Priority` (descending — highest first)
-before calling `OnInit()`. `UpdateAll/ShutdownAll` iterate the already-sorted array.
+before calling `OnReferenceCollection()` then `OnInit()`. All phase dispatchers iterate the already-sorted array.
 No separate priority list; no STL.
 
 **ModuleSystem API** (called only by `WolfEngine`):
 ```cpp
-ModuleSystem::InitAll();       // sorts by priority, then OnInit() each — once, in StartEngine()
-ModuleSystem::UpdateAll();     // OnUpdate() each — every frame in gameTick()
+ModuleSystem::InitAll();       // sorts by priority, then OnReferenceCollection() + OnInit()
+ModuleSystem::EarlyUpdate();   // OnEarlyUpdate() each — gameTick() early phase
+ModuleSystem::Update();        // OnUpdate() each — gameTick() main phase
+ModuleSystem::LateUpdate();    // OnLateUpdate() each — gameTick() late phase
+ModuleSystem::PreRender();     // OnPreRender() each — gameTick() end phase, before render
+ModuleSystem::FreeUpdate();    // OnFreeUpdate() each — every gameLoop iteration
 ModuleSystem::ShutdownAll();   // OnShutdown() in reverse priority order
 ```
 
