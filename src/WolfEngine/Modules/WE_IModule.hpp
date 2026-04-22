@@ -10,9 +10,13 @@ private:
     template<typename, int> friend class TModule;
     IModule(const char* name, int priority) : Name(name), Priority(priority) {}
     virtual void OnReferenceCollection() {}
-    virtual void OnInit()     {}
-    virtual void OnUpdate()   {}
-    virtual void OnShutdown() {}
+    virtual void OnInit()                {}
+    virtual void OnShutdown()            {}
+    virtual void OnEarlyUpdate()         {}
+    virtual void OnUpdate()              {}
+    virtual void OnLateUpdate()          {}
+    virtual void OnFreeUpdate()          {}
+    virtual void OnPreRender()           {}
 };
 
 template<typename T, int MPriority> class TModule : public IModule {

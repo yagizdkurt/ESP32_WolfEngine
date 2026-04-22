@@ -15,6 +15,7 @@
 // These macros gate both #include directives and static variable declarations
 // in WE_ModuleSystem.cpp — if constexpr cannot replace them.
 #define WE_MODULE_SAVELOAD
+#define WE_MODULE_COLLISION
 
 /*
 ============================================================================================

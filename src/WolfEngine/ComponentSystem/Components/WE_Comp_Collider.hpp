@@ -1,11 +1,13 @@
 #pragma once
+#include "WolfEngine/Settings/WE_Settings.hpp"
+#if defined(WE_MODULE_COLLISION)
+
 #include <stdint.h>
 #include "WE_BaseComp.hpp"
 #include "WE_Comp_SpriteRenderer.hpp"
 #include "WolfEngine/GameObjectSystem/WE_GameObject.hpp"
-#include "WolfEngine/Settings/WE_Settings.hpp"
 
-class ColliderManager;
+class WE_CollisionModule;
 enum class ColliderShape : uint8_t { Box, Circle };
 
 class Collider : public Component {
@@ -24,19 +26,18 @@ public:
     void bindSpriteRenderer(const SpriteRenderer* sr) { m_spriteRenderer = sr; fitToOwnerVisuals(); }
     void fitToOwnerVisuals();
 
-    GameObject*      getOwner()   const { return m_owner;               }
-    ColliderShape    getShape()   const { return m_shape;               }
-    CollisionLayer   getLayer()   const { return m_layer;               }
-    uint16_t         getMask()    const { return m_mask;                }
-    bool             isTrigger()  const { return m_isTrigger;           }
-    float            getOffsetX() const { return m_offsetX;             }
-    float            getOffsetY() const { return m_offsetY;             }
-    ColliderManager* getManager() const { return m_manager;             }
-    int              getWidth()   const { return m_bounds.box.width;    }
-    int              getHeight()  const { return m_bounds.box.height;   }
-    int              getRadius()  const { return m_bounds.circle.radius;}
-    float            getWorldX()  const;
-    float            getWorldY()  const;
+    GameObject*    getOwner()   const { return m_owner;                }
+    ColliderShape  getShape()   const { return m_shape;                }
+    CollisionLayer getLayer()   const { return m_layer;                }
+    uint16_t       getMask()    const { return m_mask;                 }
+    bool           isTrigger()  const { return m_isTrigger;            }
+    float          getOffsetX() const { return m_offsetX;              }
+    float          getOffsetY() const { return m_offsetY;              }
+    int            getWidth()   const { return m_bounds.box.width;     }
+    int            getHeight()  const { return m_bounds.box.height;    }
+    int            getRadius()  const { return m_bounds.circle.radius; }
+    float          getWorldX()  const;
+    float          getWorldY()  const;
 
 private:
     Collider(GameObject* owner, ColliderShape shape, CollisionLayer layer, uint16_t mask, bool trigger);
@@ -49,7 +50,6 @@ private:
     bool                  m_isTrigger      = false;
     float                 m_offsetX        = 0.0f;
     float                 m_offsetY        = 0.0f;
-    ColliderManager*      m_manager        = nullptr;
     int                   m_slot           = -1;
 
     union {
@@ -57,7 +57,7 @@ private:
         struct { int radius;            } circle;
     } m_bounds = { {1, 1} };
 
-    friend class ColliderManager;
+    friend class WE_CollisionModule;
     void OnCollisionEnter(Collider* other) { if (m_owner) m_owner->OnCollisionEnter(other); }
     void OnCollisionStay (Collider* other) { if (m_owner) m_owner->OnCollisionStay(other);  }
     void OnCollisionExit (Collider* other) { if (m_owner) m_owner->OnCollisionExit(other);  }
@@ -65,3 +65,7 @@ private:
     void OnTriggerStay   (Collider* other) { if (m_owner) m_owner->OnTriggerStay(other);    }
     void OnTriggerExit   (Collider* other) { if (m_owner) m_owner->OnTriggerExit(other);    }
 };
+
+#else
+#error "WE_Comp_Collider.hpp requires WE_MODULE_COLLISION — enable it in WE_Settings.hpp"
+#endif // WE_MODULE_COLLISION

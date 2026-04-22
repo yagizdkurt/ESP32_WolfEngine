@@ -8,14 +8,20 @@
 static WE_SaveManager s_saveLoad;
 #endif
 
+#if defined(WE_MODULE_COLLISION)
+#include "CollisionSystem/WE_CollisionModule.hpp"
+static WE_CollisionModule s_collision;
+#endif
+
 // ── Module list ───────────────────────────────────────────────────────────────
 static IModule* s_modules[] = {
 #if defined(WE_MODULE_SAVELOAD)
     &s_saveLoad,
 #endif
+#if defined(WE_MODULE_COLLISION)
+    &s_collision,
+#endif
 };
-
-
 
 
 
@@ -42,5 +48,10 @@ void ModuleSystem::InitAll() { // Sort by priority first, then get references, t
     for (int i = 0; i < s_count; i++) s_modules[i]->OnReferenceCollection();
     for (int i = 0; i < s_count; i++) s_modules[i]->OnInit();
 }
-void ModuleSystem::UpdateAll()   { for (int i = 0; i < s_count; i++)      s_modules[i]->OnUpdate();   }
-void ModuleSystem::ShutdownAll() { for (int i = s_count - 1; i >= 0; i--) s_modules[i]->OnShutdown(); }
+
+void ModuleSystem::EarlyUpdate() { for (int i = 0; i < s_count; i++)      s_modules[i]->OnEarlyUpdate(); }
+void ModuleSystem::Update()      { for (int i = 0; i < s_count; i++)      s_modules[i]->OnUpdate();      }
+void ModuleSystem::LateUpdate()  { for (int i = 0; i < s_count; i++)      s_modules[i]->OnLateUpdate();  }
+void ModuleSystem::PreRender()   { for (int i = 0; i < s_count; i++)      s_modules[i]->OnPreRender();   }
+void ModuleSystem::FreeUpdate()  { for (int i = 0; i < s_count; i++)      s_modules[i]->OnFreeUpdate();  }
+void ModuleSystem::ShutdownAll() { for (int i = s_count - 1; i >= 0; i--) s_modules[i]->OnShutdown();    }

@@ -15,7 +15,6 @@
 // ======= SUBSYSTEMS ========
 #include "WolfEngine/Utilities/WE_Timer.hpp"
 #include "WolfEngine/InputSystem/WE_InputManager.hpp"
-#include "WolfEngine/Physics/WE_ColliderManager.hpp"
 #include "WolfEngine/Sound/WE_SoundManager.hpp"
 #include "WolfEngine/InputSystem/WE_InputManager.hpp"
 
@@ -59,20 +58,21 @@ public:
     InputManager m_InputManager;
     UIManager m_UIManager;
     SoundManager m_SoundManager;
-    ColliderManager m_ColliderManager;
 
 private:
     std::atomic<bool> m_isRunning{false};
     GameObjectRegistry m_GameObjectRegistry = {};
+    int64_t lastFrameTime = 0;
     
-    void gameTick();
     WolfEngine() :
     m_renderer(GetDriver()),
     m_Camera(),
     m_InputManager(),
-    m_SoundManager(),
-    m_ColliderManager()
+    m_SoundManager()
     {}
+
+    void gameLoop();
+    void gameTick();
 
     friend class GameObject;
 };

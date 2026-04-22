@@ -55,7 +55,7 @@ image. There are no processes, no IPC, no network services.
 | Factory method | `GameObject::Create<T>()`, `Collider::Box()`, `Collider::Circle()`, `Sprite::Create()` | Hides construction details; `Create<T>` placement-news into a registry slot |
 | Abstract interface | `WE_Display_Driver`, `WE_IExpander`, `WE_IEEPROMDriver`, `WE_IInputProvider` | Lets driver selection be a compile-time `#if` in settings or a runtime enum dispatch; `IInputProvider` is injected at runtime via `setInputProvider()` |
 | Dirty flag | `WEUIManager`, `BaseUIElement` | Tracks UI changes at manager level; current renderer still runs UI pass every frame |
-| Triangular bitmask | `WEColliderManager` | Tracks per-pair collision state in O(n²/2) bits without a hash map |
+| Triangular bitmask | `WE_CollisionModule` | Tracks per-pair collision state in O(n²/2) bits without a hash map |
 | Placement new | `WEController` for expander objects; `WE_SaveManager` for EEPROM driver objects | Avoids heap; concrete driver constructed into a `uint8_t` buffer sized to the largest concrete type |
 | Constexpr validation | `Sprite::Create()`, `WE_SaveManager` slot guards | Illegal dimensions / slot overflow / count mismatch caught at compile time, not runtime |
 | Null-terminated config array | `WE_SAVE_EEPROMS[]` | EEPROM chip list terminates with `i2cAddr = 0x00`; chip count deduced via `constexpr` lambda |
@@ -77,7 +77,7 @@ image. There are no processes, no IPC, no network services.
 **Public interface:**
 ```cpp
 WolfEngine& Engine();          // global accessor
-void StartEngine();            // one-time hardware init → core subsystems → ModuleRegistry::InitAll()
+void StartEngine();            // one-time hardware init -> core subsystems -> ModuleSystem::InitAll()
 void StartGame();              // blocking game loop
 ```
 
@@ -175,14 +175,15 @@ virtual void OnTriggerEnter(GameObject*);
 
 ---
 
-### 6.6 ColliderManager
+### 6.6 Collision Module
 
 **Public interface:**
 ```cpp
-WEColliderManager& Colliders();   // global accessor (via Engine)
-void registerCollider(ColliderComponent*);
-void unregisterCollider(ColliderComponent*);
-void check();                      // called once per frame by game loop
+class WE_CollisionModule : public TModule<WE_CollisionModule, 0>;
+
+void RegisterCollider(Collider*);
+void UnregisterCollider(Collider*);
+void OnLateUpdate() override;      // called by ModuleSystem::LateUpdate()
 ```
 
 **Key design choices:**
@@ -191,6 +192,7 @@ void check();                      // called once per frame by game loop
 - State machine per pair: Enter fires once, Stay fires every frame while overlapping,
   Exit fires once when separation occurs. Tracked via a triangular packed bitmask.
 - Shape tests: Box–Box (AABB), Circle–Circle (distance²), Box–Circle (clamped point).
+- Optional compile target via `WE_MODULE_COLLISION`.
 
 
 ---
@@ -345,8 +347,8 @@ from `ExpanderSettings.type` at controller init time.
 
 | File | Role |
 |---|---|
-| `Modules/WE_IModule.hpp` | `IModule` base: `Name`/`Priority` public fields, private `OnInit/OnUpdate/OnShutdown`; `TModule<T, Priority>` CRTP helper |
-| `Modules/WE_ModuleSystem.hpp` | `ModuleSystem` class: declares `InitAll/UpdateAll/ShutdownAll` (only `WolfEngine` may call them) |
+| `Modules/WE_IModule.hpp` | `IModule` base: `Name`/`Priority` public fields, private phase hooks (`OnInit`, `OnEarlyUpdate`, `OnUpdate`, `OnLateUpdate`, `OnPreRender`, `OnFreeUpdate`, `OnShutdown`); `TModule<T, Priority>` CRTP helper |
+| `Modules/WE_ModuleSystem.hpp` | `ModuleSystem` class: declares `InitAll/EarlyUpdate/Update/LateUpdate/PreRender/FreeUpdate/ShutdownAll` (only `WolfEngine` may call them) |
 | `Modules/WE_ModuleSystem.cpp` | Owns all module instances and the `IModule*[]` list; `InitAll` sorts then calls hooks |
 | `Settings/WE_Settings.hpp` | Feature flags — `#define WE_MODULE_SAVELOAD`, etc. Controls which `#if` blocks compile |
 
@@ -358,9 +360,14 @@ public:
     const int         Priority;
 private:
     friend class ModuleSystem;
-    virtual void OnInit()     {}
-    virtual void OnUpdate()   {}
-    virtual void OnShutdown() {}
+  virtual void OnReferenceCollection() {}
+  virtual void OnInit()                {}
+  virtual void OnShutdown()            {}
+  virtual void OnEarlyUpdate()         {}
+  virtual void OnUpdate()              {}
+  virtual void OnLateUpdate()          {}
+  virtual void OnFreeUpdate()          {}
+  virtual void OnPreRender()           {}
 };
 
 template<typename T, int Priority>
@@ -372,7 +379,7 @@ protected:
 };
 ```
 
-`OnInit/OnUpdate/OnShutdown` are private — only `ModuleSystem` (friended) can invoke them.
+All lifecycle hooks are private — only `ModuleSystem` (friended) can invoke them.
 `TModule<T, Priority>` bakes the priority into the `IModule::Priority` field at construction
 and provides the typed `Get()` accessor. The constructor is private to the subclass, preventing
 external instantiation.
@@ -392,13 +399,17 @@ static IModule* s_modules[] = {
 };
 ```
 `InitAll()` runs an insertion sort on `s_modules` by `Priority` (descending — highest first)
-before calling `OnInit()`. `UpdateAll/ShutdownAll` iterate the already-sorted array.
+before calling `OnReferenceCollection()` then `OnInit()`. All phase dispatchers iterate the already-sorted array.
 No separate priority list; no STL.
 
 **ModuleSystem API** (called only by `WolfEngine`):
 ```cpp
-ModuleSystem::InitAll();       // sorts by priority, then OnInit() each — once, in StartEngine()
-ModuleSystem::UpdateAll();     // OnUpdate() each — every frame in gameTick()
+ModuleSystem::InitAll();       // sorts by priority, then OnReferenceCollection() + OnInit()
+ModuleSystem::EarlyUpdate();   // OnEarlyUpdate() each — gameTick() early phase
+ModuleSystem::Update();        // OnUpdate() each — gameTick() main phase
+ModuleSystem::LateUpdate();    // OnLateUpdate() each — gameTick() late phase
+ModuleSystem::PreRender();     // OnPreRender() each — gameTick() end phase, before render
+ModuleSystem::FreeUpdate();    // OnFreeUpdate() each — every gameLoop iteration
 ModuleSystem::ShutdownAll();   // OnShutdown() in reverse priority order
 ```
 

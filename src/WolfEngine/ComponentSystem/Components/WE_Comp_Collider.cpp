@@ -1,5 +1,7 @@
 #include "WE_Comp_Collider.hpp"
-#include "WolfEngine/WolfEngine.hpp"
+#if defined(WE_MODULE_COLLISION)
+
+#include "WolfEngine/Modules/CollisionSystem/WE_CollisionModule.hpp"
 
 // Private constructor
 Collider::Collider(GameObject* owner, ColliderShape shape, CollisionLayer layer, uint16_t mask, bool trigger)
@@ -12,8 +14,7 @@ Collider::Collider(GameObject* owner, ColliderShape shape, CollisionLayer layer,
     type        = ComponentType::COMP_COLLIDER;
     tickEnabled = false;
     owner->registerComponent(this);
-    m_manager = &Engine().m_ColliderManager;
-    m_manager->registerCollider(this);
+    WE_CollisionModule::Get().RegisterCollider(this);
 }
 
 // Factory - Box with manual size
@@ -40,7 +41,7 @@ Collider Collider::Circle(GameObject* owner, int radius, CollisionLayer layer, u
 
 // Destructor
 Collider::~Collider() {
-    m_manager->unregisterCollider(this);
+    WE_CollisionModule::Get().UnregisterCollider(this);
 }
 
 // setSize / setRadius
@@ -71,3 +72,5 @@ void Collider::fitToOwnerVisuals() {
 // getWorldX / getWorldY - transform position + offset
 float Collider::getWorldX() const { return m_owner->transform.position.x + m_offsetX; }
 float Collider::getWorldY() const { return m_owner->transform.position.y + m_offsetY; }
+
+#endif // WE_MODULE_COLLISION

@@ -103,11 +103,36 @@ public:
     // ---------------------------------------------------------
     void destroyGameObject() { DestroyGameObject(this); }
 
+    // ---------------------------------------------------------
+    //  EarlyUpdate (virtual)
+    //  Called every frame in the Early phase from
+    //  WolfEngine::gameTick() for all active objects.
+    //  Order in Early phase:
+    //      1) Input tick
+    //      2) GameObject::EarlyUpdate()
+    //      3) earlyComponentTick()
+    //      4) ModuleSystem::EarlyUpdate()
+    //  Use this for input-driven prep before main game logic.
+    //
+    //      Good:
+    //          void EarlyUpdate() override {
+    //              // cache input state for this frame
+    //          }
+    //
+    //      Bad:
+    //          player->EarlyUpdate(); // manual call breaks frame ordering
+    // ---------------------------------------------------------
+    virtual void EarlyUpdate() {}
 
     // ---------------------------------------------------------
     //  Update (virtual)
-    //  Called every frame by the engine for all active objects.
-    //  Override this in your subclass to implement game logic.
+    //  Called every frame in the Main phase from
+    //  WolfEngine::gameTick() for all active objects.
+    //  Order in Main phase:
+    //      1) GameObject::Update()
+    //      2) componentTick()
+    //      3) ModuleSystem::Update()
+    //  Override this in your subclass for main game logic.
     //  Do not call this manually — the engine drives it.
     //
     //      Good:
@@ -120,6 +145,27 @@ public:
     // ---------------------------------------------------------
     virtual void Update() {}
 
+    // ---------------------------------------------------------
+    //  LateUpdate (virtual)
+    //  Called every frame in the Late phase from
+    //  WolfEngine::gameTick() for all active objects.
+    //  Order in Late phase:
+    //      1) GameObject::LateUpdate()
+    //      2) lateComponentTick()
+    //      3) ModuleSystem::LateUpdate()
+    //      4) Camera follow tick
+    //      5) ColliderManager tick (temporary legacy call)
+    //  Use this for post-logic cleanup/finalization.
+    //
+    //      Good:
+    //          void LateUpdate() override {
+    //              // finalize values after main logic
+    //          }
+    //
+    //      Bad:
+    //          enemy->LateUpdate(); // manual call breaks frame ordering
+    // ---------------------------------------------------------
+    virtual void LateUpdate() {}
 
     // ---------------------------------------------------------
     //  start (virtual)
@@ -199,7 +245,10 @@ private:
     uint8_t  id = -1;
     bool     isValid = false;
     bool     hasStarted = false;
+    void earlyComponentTick();
     void componentTick();
+    void lateComponentTick();
+    void preRenderComponentTick();
     bool CreateObject();
     void callStart();
     friend class WolfEngine;

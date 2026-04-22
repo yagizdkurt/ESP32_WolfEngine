@@ -1,31 +1,32 @@
-#include "WE_ColliderManager.hpp"
-#include "WolfEngine/ComponentSystem/Components/WE_Comp_Collider.hpp"
-#include <algorithm>
+#include "WE_CollisionModule.hpp"
+#if defined(WE_MODULE_COLLISION)
 
-ColliderManager::ColliderManager() noexcept {
-    for (int i = 0; i < MAX_COLLIDERS; ++i) { m_freeStack[i] = i; }
+#include "WolfEngine/ComponentSystem/Components/WE_Comp_Collider.hpp"
+#include <string.h>
+
+WE_CollisionModule::WE_CollisionModule() : TModule<WE_CollisionModule, 0>("CollisionModule") {
+    for (int i = 0; i < MAX_COLLIDERS; ++i) m_freeStack[i] = i;
     m_freeTop = MAX_COLLIDERS;
 }
 
-
-void ColliderManager::registerCollider(Collider* collider) {
+void WE_CollisionModule::RegisterCollider(Collider* collider) {
     if (m_freeTop == 0) return;
-    const int slot    = m_freeStack[--m_freeTop];
-    m_colliders[slot] = collider;
-    collider->m_slot  = slot;
+    const int slot     = m_freeStack[--m_freeTop];
+    m_colliders[slot]  = collider;
+    collider->m_slot   = slot;
 }
 
-void ColliderManager::unregisterCollider(Collider* collider) {
+void WE_CollisionModule::UnregisterCollider(Collider* collider) {
     const int slot = collider->m_slot;
-    if (slot < 0 || slot >= MAX_COLLIDERS) return;      // not registered
+    if (slot < 0 || slot >= MAX_COLLIDERS) return;
     m_colliders[slot] = nullptr;
     collider->m_slot  = -1;
     clearPairsForSlot(slot);
-    m_freeStack[m_freeTop++] = slot;                    // return slot to free-list
+    m_freeStack[m_freeTop++] = slot;
 }
 
-void ColliderManager::tick() {
-    clearBits(m_currPairs);
+void WE_CollisionModule::OnLateUpdate() {
+    memset(m_currPairs, 0, PAIR_BYTES);
 
     for (int i = 0; i < MAX_COLLIDERS; ++i) {
         Collider* a = m_colliders[i];
@@ -44,7 +45,6 @@ void ColliderManager::tick() {
         }
     }
 
-    // Second pass: fire Exit for pairs that were overlapping last frame but not this one.
     for (int i = 0; i < MAX_COLLIDERS; ++i) {
         Collider* a = m_colliders[i];
         if (a == nullptr) continue;
@@ -60,10 +60,10 @@ void ColliderManager::tick() {
         }
     }
 
-    m_prevPairs = m_currPairs;
+    memcpy(m_prevPairs, m_currPairs, PAIR_BYTES);
 }
 
-bool ColliderManager::canCollide(const Collider* a, const Collider* b) {
+bool WE_CollisionModule::canCollide(const Collider* a, const Collider* b) {
     if (a == b) return false;
     if (a->getOwner() == b->getOwner()) return false;
     const uint16_t aToB = a->getMask() & static_cast<uint16_t>(b->getLayer());
@@ -71,22 +71,21 @@ bool ColliderManager::canCollide(const Collider* a, const Collider* b) {
     return (aToB != 0U) && (bToA != 0U);
 }
 
-bool ColliderManager::intersects(const Collider* a, const Collider* b) {
+bool WE_CollisionModule::intersects(const Collider* a, const Collider* b) {
     using IntersectFn = bool (*)(const Collider*, const Collider*);
     static constexpr int SHAPE_COUNT = 2;
     const int ai = static_cast<int>(a->getShape());
     const int bi = static_cast<int>(b->getShape());
     if (ai < 0 || ai >= SHAPE_COUNT || bi < 0 || bi >= SHAPE_COUNT) return false;
     static const IntersectFn kIntersectTable[SHAPE_COUNT][SHAPE_COUNT] = {
-        { &ColliderManager::intersectsBoxBox,    &ColliderManager::intersectsBoxCircle    },
-        { &ColliderManager::intersectsBoxCircle, &ColliderManager::intersectsCircleCircle }
+        { &WE_CollisionModule::intersectsBoxBox,    &WE_CollisionModule::intersectsBoxCircle    },
+        { &WE_CollisionModule::intersectsBoxCircle, &WE_CollisionModule::intersectsCircleCircle }
     };
-    // Circle-Box case: swap args so the box is always first
     if (ai == 1 && bi == 0) return kIntersectTable[bi][ai](b, a);
     return kIntersectTable[ai][bi](a, b);
 }
 
-bool ColliderManager::intersectsBoxBox(const Collider* a, const Collider* b) {
+bool WE_CollisionModule::intersectsBoxBox(const Collider* a, const Collider* b) {
     const float ax1 = a->getWorldX();
     const float ay1 = a->getWorldY();
     const float ax2 = ax1 + static_cast<float>(a->getWidth());
@@ -100,14 +99,14 @@ bool ColliderManager::intersectsBoxBox(const Collider* a, const Collider* b) {
     return (ax1 < bx2) && (ax2 > bx1) && (ay1 < by2) && (ay2 > by1);
 }
 
-bool ColliderManager::intersectsCircleCircle(const Collider* a, const Collider* b) {
+bool WE_CollisionModule::intersectsCircleCircle(const Collider* a, const Collider* b) {
     const float dx = a->getWorldX() - b->getWorldX();
     const float dy = a->getWorldY() - b->getWorldY();
     const float r  = static_cast<float>(a->getRadius() + b->getRadius());
     return (dx * dx + dy * dy) <= (r * r);
 }
 
-bool ColliderManager::intersectsBoxCircle(const Collider* box, const Collider* circle) {
+bool WE_CollisionModule::intersectsBoxCircle(const Collider* box, const Collider* circle) {
     const float bx = box->getWorldX();
     const float by = box->getWorldY();
     const float bw = static_cast<float>(box->getWidth());
@@ -117,14 +116,14 @@ bool ColliderManager::intersectsBoxCircle(const Collider* box, const Collider* c
     const float cy = circle->getWorldY();
     const float r  = static_cast<float>(circle->getRadius());
 
-    const float closestX = std::clamp(cx, bx, bx + bw);
-    const float closestY = std::clamp(cy, by, by + bh);
+    const float closestX = clamp(cx, bx, bx + bw);
+    const float closestY = clamp(cy, by, by + bh);
     const float dx = cx - closestX;
     const float dy = cy - closestY;
     return (dx * dx + dy * dy) <= (r * r);
 }
 
-void ColliderManager::clearPairsForSlot(int slot) {
+void WE_CollisionModule::clearPairsForSlot(int slot) {
     for (int i = 0; i < MAX_COLLIDERS; ++i) {
         if (i == slot) continue;
         const int p = pairIndex(slot, i);
@@ -133,10 +132,7 @@ void ColliderManager::clearPairsForSlot(int slot) {
     }
 }
 
-// -------------------------------------
-// Shape Independent Collision Event Dispatching
-// -------------------------------------
-void ColliderManager::dispatchEnter(Collider* a, Collider* b) const {
+void WE_CollisionModule::dispatchEnter(Collider* a, Collider* b) const {
     if (a->isTrigger() || b->isTrigger()) {
         a->OnTriggerEnter(b);
         b->OnTriggerEnter(a);
@@ -145,7 +141,8 @@ void ColliderManager::dispatchEnter(Collider* a, Collider* b) const {
         b->OnCollisionEnter(a);
     }
 }
-void ColliderManager::dispatchStay(Collider* a, Collider* b) const {
+
+void WE_CollisionModule::dispatchStay(Collider* a, Collider* b) const {
     if (a->isTrigger() || b->isTrigger()) {
         a->OnTriggerStay(b);
         b->OnTriggerStay(a);
@@ -154,7 +151,8 @@ void ColliderManager::dispatchStay(Collider* a, Collider* b) const {
         b->OnCollisionStay(a);
     }
 }
-void ColliderManager::dispatchExit(Collider* a, Collider* b) const {
+
+void WE_CollisionModule::dispatchExit(Collider* a, Collider* b) const {
     if (a->isTrigger() || b->isTrigger()) {
         a->OnTriggerExit(b);
         b->OnTriggerExit(a);
@@ -163,4 +161,5 @@ void ColliderManager::dispatchExit(Collider* a, Collider* b) const {
         b->OnCollisionExit(a);
     }
 }
-// ----------------------------------------------
+
+#endif // WE_MODULE_COLLISION

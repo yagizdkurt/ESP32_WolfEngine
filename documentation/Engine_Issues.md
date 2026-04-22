@@ -220,7 +220,7 @@ aggregate initialization usage.
 
 **Status:** Active
 **Severity:** Low
-**Location:** `src/WolfEngine/Physics/WE_ColliderManager.cpp`
+**Location:** `src/WolfEngine/Modules/CollisionSystem/WE_CollisionModule.cpp`
 **What it is:** Collision detection checks every collider against every other collider
 — O(n²) complexity. `MAX_COLLIDERS` is currently 64.
 **Impact:** At 64 colliders the cost is fixed and tolerable. If `MAX_COLLIDERS` ever

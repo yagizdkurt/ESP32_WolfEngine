@@ -58,8 +58,12 @@ WolfEngine/
 │   ├── WE_IInputProvider.hpp       # Abstract input provider interface; implement to override hardware polling
 │   └── WE_Controller.hpp / .cpp    # Single physical controller: GPIO/expander polling, debounce, ADC joystick
 │
-├── Physics/
-│   ├── WE_ColliderManager.hpp / .cpp  # O(n²) pair iteration; shape intersection; Enter/Stay/Exit dispatch
+├── Modules/
+│   ├── WE_IModule.hpp / WE_ModuleSystem.hpp / .cpp  # Module lifecycle + static module registry
+│   ├── CollisionSystem/
+│   │   └── WE_CollisionModule.hpp / .cpp  # O(n²) pair iteration; shape intersection; Enter/Stay/Exit dispatch via OnLateUpdate
+│   └── SaveLoadSystem/
+│       └── WE_SaveManager.hpp / .cpp  # EEPROM-backed save/load module
 │
 ├── Sound/
 │   ├── WE_SoundManager.hpp / .cpp  # Two PWM channels (music + SFX); note sequencer; loop + callback
@@ -78,15 +82,6 @@ WolfEngine/
 │       ├── WE_PCF8574.hpp                # 8-bit quasi-bidirectional expander (0x20–0x27)
 │       ├── WE_PCF8575.hpp                # 16-bit variant of PCF8574
 │       └── WE_MCP23017.hpp               # Register-based 16-bit expander, Port A + B, pull-ups
-│
-├── Modules/                       # Optional engine subsystems managed by ModuleSystem
-│   ├── WE_IModule.hpp             # Module base and template
-│   ├── WE_ModuleSystem.hpp        #
-│   ├── WE_ModuleSystem.cpp        # !! IMPORTANT: THIS IS WHERE MODULES ARE REGISTERED BY MAINTAINERS. !!
-│   └── SaveLoadSystem/            # Persistent save data module
-│       ├── WE_SaveManager.hpp     # Save Manager Class
-│       ├── WE_SaveManager.cpp     #
-│       └── WE_SaveSettings.hpp    # EEPROM chip list, slot definitions, integrity flag (used by SaveManager only)
 │
 └── Utilities/
     ├── WE_I2C.hpp / .cpp          # I²C bus singleton: I2C_NUM_0, 400 kHz, scan, reg read/write
