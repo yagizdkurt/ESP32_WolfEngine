@@ -28,3 +28,6 @@
 
 # Exclude build output
 desktop/build/
+
+# Exlcude game spesific soruces
+src/GameCode/**
