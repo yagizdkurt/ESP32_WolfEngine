@@ -1,6 +1,7 @@
 #pragma once
 #include "WolfEngine/Drivers/EepromDrivers/WE_IEEPROMDriver.hpp"
 #include "WolfEngine/Utilities/WE_I2C.hpp"
+#include "freertos/task.h"
 #include <string.h>
 
 // ─────────────────────────────────────────────────────────────────────────────

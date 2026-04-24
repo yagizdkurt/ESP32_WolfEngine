@@ -29,6 +29,18 @@ RESOLVED in <Phase> - <DD.MM.YY>
 
 -----------------------------------------------------------------------------------------
 
+## vTaskDelay Declared in FreeRTOS.h Instead of task.h
+RESOLVED in Phase 4 - 24.04.26
+**Location:** `desktop/stubs/freertos/FreeRTOS.h`; `desktop/stubs/freertos/task.h`; `src/WolfEngine/Drivers/EepromDrivers/WE_EEPROM24LC512.hpp`
+**What it did:** Desktop stubs defined `vTaskDelay` directly in `freertos/FreeRTOS.h`, while real FreeRTOS exposes it via `freertos/task.h`. This allowed desktop builds to compile task API call sites without explicit `task.h` inclusion, masking missing-include defects that can fail on hardware.
+**Resolution (Phase 4):** Header ownership was aligned to real FreeRTOS and task API usage was made explicit at the engine call site:
+- Removed `vTaskDelay` declaration from `desktop/stubs/freertos/FreeRTOS.h`.
+- Added `desktop/stubs/freertos/task.h` and moved the desktop `vTaskDelay` stub there.
+- Added explicit `#include "freertos/task.h"` in `WE_EEPROM24LC512.hpp`, where `vTaskDelay` is called in `pollAck()`.
+**Extra Notes** This prevents desktop transitive-include behavior from hiding missing `task.h` dependencies.
+
+---
+
 ## Diagnostics Counters Were Lifetime Totals, Not Per-Frame
 RESOLVED in Phase 4 - 19.04.26
 **Location:** `src/WolfEngine/Graphics/RenderSystem/WE_RenderCore.cpp` — `beginFrame()` diagnostics reset path; `src/WolfEngine/Graphics/RenderSystem/WE_DrawCommand.hpp` — `FrameDiagnostics` field comments
@@ -129,5 +141,3 @@ globals, no desktop-specific code in engine source:
 - `main_desktop.cpp` calls `Engine().RequestQuit()` on ESC/quit, then
   `engineThread.join()`, then destroys SDL objects in order before returning normally.
 - `std::exit(0)` is removed entirely.
-
----
