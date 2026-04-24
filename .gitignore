@@ -9,6 +9,7 @@
 !platformio.ini
 !cxx_only_flags.py
 !mkdocs.yml
+!Contributing.md
 
 # ProjectFolders
 !IconsPhotosEtc/
