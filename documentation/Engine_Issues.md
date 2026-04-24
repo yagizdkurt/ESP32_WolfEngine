@@ -56,34 +56,6 @@ Maintenance note: The correct long-term fix is to have UIPanel::draw() bypass an
 
 ---
 
-## One-Frame Position Lag in Sprite Rendering
-
-**Status:** Deferred  
-**Severity:** Low  
-**Location:** `src/WolfEngine/WolfEngine.cpp` — `gameTick()` tick ordering  
-**What it is:** `SpriteRenderer::tick()` submits draw commands during `componentTick()`, which runs before `Update()` and `camera.followTick()`. Commands are submitted with last frame's positions and camera state.  
-**Impact:** Sprites render one frame behind their actual game logic position. Invisible at 30fps for normal movement. Becomes noticeable with fast-moving objects, projectiles, or a physics debug overlay requiring current-frame accuracy.  
-**Maintenance note:** Fix requires splitting `render()` into `beginFrame()` before `componentTick` and `executeAndFlush()` after `camera.followTick()` in `gameTick()`. Defer until frame-accurate rendering is visibly needed.
-
----
-
-
-## Public Interfaces in Active Flux
-
-**Status:** Needs Investigation
-**Severity:** High
-**Location:** Engine-wide — all public headers
-**What it is:** Public API surfaces (method signatures, struct layouts, module
-interfaces) may change without notice as the engine develops. There is no stability
-contract or versioning on any interface.
-**Impact:** Game code written against the current API may break silently between
-engine updates. Refactors to core systems (renderer, input, camera) risk cascading
-changes across all game code that depends on them.
-**Maintenance note:** Consider marking stable interfaces explicitly once the engine
-reaches a usable milestone.
-
----
-
 ## Hardcoded Camera Lerp Factor
 
 **Status:** Active

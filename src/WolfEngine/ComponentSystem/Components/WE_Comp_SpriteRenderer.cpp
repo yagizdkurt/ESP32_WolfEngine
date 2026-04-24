@@ -14,7 +14,7 @@ SpriteRenderer::SpriteRenderer(GameObject* owner, const Sprite* sprite, const ui
     owner->registerComponent(this);
 }
 
-void SpriteRenderer::tick() { if constexpr (Settings.render.spriteSystemEnabled) onDraw(); }
+void SpriteRenderer::preRenderTick() { if constexpr (Settings.render.spriteSystemEnabled) onDraw(); }
 
 void SpriteRenderer::onDraw() {
     if (!m_visible || !m_sprite) return;
