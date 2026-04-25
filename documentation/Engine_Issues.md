@@ -46,41 +46,34 @@ section added. Do not delete entries from this file — strike-through is not su
 
 ---
 
-Panel Children Anchor Assumption
+## UIPanel Internal Child Storage Always Allocates maxPanelChildren Slots
+**Status:** Deferred
+**Severity:** Low
+**Location:** `src/WolfEngine/Graphics/UserInterface/UIPanel/WE_UIPanel.hpp` — `children[Settings.limits.maxPanelChildren]`
+**What it is:** `UIPanel` holds a fixed internal array sized to `maxPanelChildren` regardless of how many children are actually registered. Combined with the caller's `UIElementRef` array, every panel effectively pays 2x pointer storage — once in the caller's array (temporary) and once in the panel's internal copy.
+**Impact:** Each `UIPanel` instance always consumes `maxPanelChildren * 4` bytes of RAM whether it has 1 child or max children. With multiple panels and a generous `maxPanelChildren` setting, this adds up unnecessarily. On a RAM-constrained ESP32 this could become a problem if panel count or the cap grows.
+**Maintenance note:** When tuning `Settings.limits.maxPanelChildren`, remember every `UIPanel` instance pays that cost in full — not just panels that use many children. Keep the cap as tight as real usage requires. If panel count grows significantly in future, consider a two-field approach: a smaller `defaultChildSlots` for typical panels and a separate large-panel path, or simply audit actual max child usage across all panels before raising the cap.
+
+---
+
+## Sort Key Y Byte is Architecturally Undersized
+**Status:** Deferred
+**Severity:** Medium
+**Location:** `src/WolfEngine/ComponentSystem/Components/WE_Comp_SpriteRenderer.cpp` — sort key packing (lines 40-43); `src/WolfEngine/Utils/WE_MathUtils.h` — `clampToByte`
+**What it is:** The sort key packs screen Y into a single byte (`uint8_t`), giving a range of 0–255. Negative or large `int16_t` Y values are clamped before the cast to prevent modulo-256 aliasing. The clamp is correct for the current ESP32 target (~240px tall) but does not fix the underlying bit-width mismatch — it just makes truncation safe within current constraints.
+**Impact:** If the engine ever targets a higher-resolution display (>255px), uses world-space Y sorting, or needs sub-pixel precision, the 8-bit Y bucket silently collapses distinct positions into the same sort order. The `clampToByte` utility will mask the problem rather than surface it.
+**Maintenance note:** If the sort key struct is ever revisited, widen the Y field to 16 bits and promote `sortKey` from `uint16_t` to `uint32_t` — layout becomes `[layer:8][padding:8][screenY:16]` or similar. Remove `clampToByte` from the packing path at that point as it will no longer be needed.
+
+---
+
+## Panel Children Anchor Assumption
+
 Status: Active
 Severity: Medium
 Location: UIPanel.cpp — draw() offset pass-through; WE_BaseUIElement.hpp — resolveRect()
 What it is: Panel children must be constructed with UIAnchor::TopLeft for correct rendering. UIPanel::draw() passes its resolved screen position as offX/offY to each child's draw(), which adds it on top of the child's own anchor-resolved position. Any anchor other than TopLeft produces a screen-anchor origin that gets double-offset with the panel position, pushing children off-screen or to wrong positions.
 Impact: Users constructing panel children with any anchor other than UIAnchor::TopLeft will get silently wrong rendering with no error or warning. The default anchor is UIAnchor::Center, so any panel child created without explicitly specifying UIAnchor::TopLeft will be incorrectly positioned. This is a footgun in the public API.
 Maintenance note: The correct long-term fix is to have UIPanel::draw() bypass anchor resolution entirely for children — either by forcing TopLeft on children before calling draw(), or by passing absolute screen coordinates directly and having child draw() accept a pre-resolved position rather than re-resolving from their transform. Until fixed, any documentation or examples involving panels must explicitly specify UIAnchor::TopLeft on all children.
-
----
-
-## One-Frame Position Lag in Sprite Rendering
-
-**Status:** Deferred  
-**Severity:** Low  
-**Location:** `src/WolfEngine/WolfEngine.cpp` — `gameTick()` tick ordering  
-**What it is:** `SpriteRenderer::tick()` submits draw commands during `componentTick()`, which runs before `Update()` and `camera.followTick()`. Commands are submitted with last frame's positions and camera state.  
-**Impact:** Sprites render one frame behind their actual game logic position. Invisible at 30fps for normal movement. Becomes noticeable with fast-moving objects, projectiles, or a physics debug overlay requiring current-frame accuracy.  
-**Maintenance note:** Fix requires splitting `render()` into `beginFrame()` before `componentTick` and `executeAndFlush()` after `camera.followTick()` in `gameTick()`. Defer until frame-accurate rendering is visibly needed.
-
----
-
-
-## Public Interfaces in Active Flux
-
-**Status:** Needs Investigation
-**Severity:** High
-**Location:** Engine-wide — all public headers
-**What it is:** Public API surfaces (method signatures, struct layouts, module
-interfaces) may change without notice as the engine develops. There is no stability
-contract or versioning on any interface.
-**Impact:** Game code written against the current API may break silently between
-engine updates. Refactors to core systems (renderer, input, camera) risk cascading
-changes across all game code that depends on them.
-**Maintenance note:** Consider marking stable interfaces explicitly once the engine
-reaches a usable milestone.
 
 ---
 

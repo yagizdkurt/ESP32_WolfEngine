@@ -80,6 +80,8 @@ struct HardwareConfig {
 };
 
 struct RenderConfig {
+    uint16_t      screenWidth;
+    uint16_t      screenHeight;
     Region        gameRegion;
     uint16_t      maxDrawCommands;
     uint16_t      defaultBackgroundPixel;
@@ -98,7 +100,9 @@ struct InputConfig {
 
 struct LimitsConfig {
     uint8_t maxGameObjects;
+    uint8_t maxUIElements;
     uint8_t maxPanelChildren;
+    uint8_t maxPaletteInexes;
 };
 
 struct DebugConfig {

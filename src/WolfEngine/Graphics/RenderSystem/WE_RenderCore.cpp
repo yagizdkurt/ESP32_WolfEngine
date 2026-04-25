@@ -3,12 +3,18 @@
 #include "WolfEngine/Graphics/UserInterface/Fonts/WE_Font.hpp"
 #include "WolfEngine/WolfEngine.hpp"
 #include "esp_log.h"
+#include <cassert>
 
 #ifndef IRAM_ATTR
 #define IRAM_ATTR
 #endif
 
-void Renderer::initialize() { m_driver->initialize(); }
+void Renderer::initialize() {
+    m_driver->initialize();
+    assert(m_driver->screenWidth  == Settings.render.screenWidth  &&
+           m_driver->screenHeight == Settings.render.screenHeight &&
+           "Driver dimensions do not match Settings.render screen size");
+}
 
 
 // -------------------------------------------------------------
@@ -49,10 +55,9 @@ bool Renderer::submitDrawCommand(const DrawCommand& cmd) {
 //  command fields. Handles rotation index math, transparency,
 //  and per-pixel bounds checking against the game region.
 // -------------------------------------------------------------
-void IRAM_ATTR Renderer::drawSpriteInternal(int16_t x, int16_t y,
-                                   const uint8_t*  pixels,
-                                   const uint16_t* palette,
-                                   int size, Rotation rotation) {
+void IRAM_ATTR Renderer::drawSpriteInternal(int16_t x, int16_t y, 
+    const uint8_t*  pixels, const uint16_t* palette, int size, Rotation rotation) 
+    {
     for (int py = 0; py < size; py++) {
         for (int px = 0; px < size; px++) {
 
@@ -74,22 +79,26 @@ void IRAM_ATTR Renderer::drawSpriteInternal(int16_t x, int16_t y,
                     break;
             }
 
-            // Skip transparent pixels (index 0)
             uint8_t paletteIndex = pixels[srcIndex];
-            if (paletteIndex == 0) continue;
+            if (paletteIndex == 0) continue; // transparent pixel — skip
 
             // Calculate screen pixel position
             int drawX = x + px;
             int drawY = y + py;
 
-            // Per-pixel bounds check — clip to game region
+            // Per-pixel bounds check: clip to gameRegion.
+            // gameRegion/framebuffer compatibility is compile-time validated in WE_RenderCore.hpp.
             if (drawX < Settings.render.gameRegion.x1 || drawX >= Settings.render.gameRegion.x2) continue;
             if (drawY < Settings.render.gameRegion.y1 || drawY >= Settings.render.gameRegion.y2) continue;
 
-            // Palette lookup and write to framebuffer
-            uint16_t color = palette[paletteIndex];
+            // Palette lookup (array bounds checked by resolver returns 0x0000 transparent if out of bounds)
+            uint16_t color = ResolvePaletteColor(palette, paletteIndex);
+            if (color == 0x0000) continue;
+
+            // Byte swap if the display driver requires it (e.g. ST7735 expects RGB565 in BGR byte order)
             if (m_driver->requiresByteSwap) color = (color >> 8) | (color << 8);
-            m_framebuffer[drawY * RENDER_SCREEN_WIDTH + drawX] = color;
+            // Write pixel to framebuffer
+            m_framebuffer[drawY * Settings.render.screenWidth + drawX] = color;
         }
     }
 }
@@ -104,11 +113,11 @@ void Renderer::drawFillRectInternal(int16_t x, int16_t y, uint8_t w, uint8_t h, 
     if (m_driver->requiresByteSwap) color = (color >> 8) | (color << 8);
     for (int py = 0; py < h; py++) {
         int drawY = y + py;
-        if (drawY < 0 || drawY >= RENDER_SCREEN_HEIGHT) continue;
+        if (drawY < 0 || drawY >= Settings.render.screenHeight) continue;
         for (int px = 0; px < w; px++) {
             int drawX = x + px;
-            if (drawX < 0 || drawX >= RENDER_SCREEN_WIDTH) continue;
-            m_framebuffer[drawY * RENDER_SCREEN_WIDTH + drawX] = color;
+            if (drawX < 0 || drawX >= Settings.render.screenWidth) continue;
+            m_framebuffer[drawY * Settings.render.screenWidth + drawX] = color;
         }
     }
 }
@@ -130,8 +139,8 @@ void Renderer::drawLineInternal(int16_t x1, int16_t y1, int16_t x2, int16_t y2, 
 
     int cx = x1, cy = y1;
     while (true) {
-        if (cx >= 0 && cx < RENDER_SCREEN_WIDTH && cy >= 0 && cy < RENDER_SCREEN_HEIGHT)
-            m_framebuffer[cy * RENDER_SCREEN_WIDTH + cx] = color;
+        if (cx >= 0 && cx < Settings.render.screenWidth && cy >= 0 && cy < Settings.render.screenHeight)
+            m_framebuffer[cy * Settings.render.screenWidth + cx] = color;
         if (cx == x2 && cy == y2) break;
         int e2 = 2 * err;
         if (e2 >= dy) { err += dy; cx += sx; }
@@ -150,15 +159,15 @@ void Renderer::drawCircleInternal(int16_t cx, int16_t cy, uint8_t radius, uint16
     if (m_driver->requiresByteSwap) color = (color >> 8) | (color << 8);
 
     auto plot = [&](int px, int py) {
-        if (px >= 0 && px < RENDER_SCREEN_WIDTH && py >= 0 && py < RENDER_SCREEN_HEIGHT)
-            m_framebuffer[py * RENDER_SCREEN_WIDTH + px] = color;
+        if (px >= 0 && px < Settings.render.screenWidth && py >= 0 && py < Settings.render.screenHeight)
+            m_framebuffer[py * Settings.render.screenWidth + px] = color;
     };
     auto hspan = [&](int lx, int rx, int py) {
-        if (py < 0 || py >= RENDER_SCREEN_HEIGHT) return;
+        if (py < 0 || py >= Settings.render.screenHeight) return;
         int x0 = (lx < 0) ? 0 : lx;
-        int x1 = (rx >= RENDER_SCREEN_WIDTH) ? RENDER_SCREEN_WIDTH - 1 : rx;
+        int x1 = (rx >= Settings.render.screenWidth) ? Settings.render.screenWidth - 1 : rx;
         for (int px = x0; px <= x1; px++)
-            m_framebuffer[py * RENDER_SCREEN_WIDTH + px] = color;
+            m_framebuffer[py * Settings.render.screenWidth + px] = color;
     };
 
     int x = radius, y = 0, err = 0;
@@ -204,9 +213,9 @@ void Renderer::drawTextRunInternal(int16_t x, int16_t y, const char* text, uint1
                 if (colBits & (1 << row)) {
                     int drawX = cursorX + col;
                     int drawY = y + row;
-                    if (drawX >= 0 && drawX < RENDER_SCREEN_WIDTH &&
-                        drawY >= 0 && drawY < RENDER_SCREEN_HEIGHT)
-                        m_framebuffer[drawY * RENDER_SCREEN_WIDTH + drawX] = color;
+                    if (drawX >= 0 && drawX < Settings.render.screenWidth &&
+                        drawY >= 0 && drawY < Settings.render.screenHeight)
+                        m_framebuffer[drawY * Settings.render.screenWidth + drawX] = color;
                 }
             }
         }
@@ -302,7 +311,7 @@ void Renderer::beginFrame() {
         constexpr uint16_t bg         = Settings.render.defaultBackgroundPixel;
         constexpr uint16_t bgSwapped  = (bg >> 8) | (bg << 8);
         const uint16_t fill = m_driver->requiresByteSwap ? bgSwapped : bg;
-        std::fill( m_framebuffer, m_framebuffer + m_driver->screenWidth * m_driver->screenHeight, fill );
+        std::fill( m_framebuffer, m_framebuffer + (Settings.render.screenWidth * Settings.render.screenHeight), fill );
     }
 }
 

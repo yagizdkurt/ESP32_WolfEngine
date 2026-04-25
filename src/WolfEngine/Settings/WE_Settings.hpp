@@ -8,6 +8,8 @@
 // cannot be replaced by an enum.
 #ifndef DISPLAY_SDL
     #define DISPLAY_ST7735
+    #define RENDER_SCREEN_WIDTH  128
+    #define RENDER_SCREEN_HEIGHT 160
 #endif
 
 // ── Module Enables ───────────────────────────────────────────────────────────
@@ -42,8 +44,11 @@ inline constexpr EngineConfig Settings = {
 
     // ── Renderer ─────────────────────────────────────────────────────────────
     .render = {
-        // Rectangular area of the screen used for game rendering. { x1, y1, x2, y2 }
-        .gameRegion              = { 0, 0, 128, 160 },
+        .screenWidth             = RENDER_SCREEN_WIDTH,
+        .screenHeight            = RENDER_SCREEN_HEIGHT,
+        // Rectangular game render area in half-open bounds: [x1, x2), [y1, y2).
+        // This is compile-time validated against framebuffer dimensions in WE_RenderCore.hpp.
+        .gameRegion              = { 0, 0, RENDER_SCREEN_WIDTH - 0, RENDER_SCREEN_HEIGHT - 0 },
         // Maximum DrawCommands that can be submitted per frame. Tune based on peak sprite count.
         .maxDrawCommands         = 128,
         // Background color in RGB565 format. 0x0000 = Black, 0xFFFF = White.
@@ -138,7 +143,11 @@ inline constexpr EngineConfig Settings = {
     // ── Limits ───────────────────────────────────────────────────────────────
     .limits = {
         .maxGameObjects   = 64,
+        // Maximum top-level UI elements accepted by UI().setElements(...).
+        .maxUIElements    = 32,
+        // Maximum children per UIPanel.
         .maxPanelChildren = 10,
+        .maxPaletteInexes = 32,
     },
 
     // ── Debug ────────────────────────────────────────────────────────────────
@@ -148,6 +157,8 @@ inline constexpr EngineConfig Settings = {
 // ── Validation ───────────────────────────────────────────────────────────────
 static_assert(Settings.limits.maxGameObjects > 0 && Settings.limits.maxGameObjects <= 65535,
     "maxGameObjects must be between 1 and 65535 — live counter in WE_GORegistry is uint16_t");
+static_assert(Settings.limits.maxUIElements > 0 && Settings.limits.maxUIElements <= 255,
+    "maxUIElements must be between 1 and 255 — UIManager count is uint8_t");
 static_assert(Settings.limits.maxPanelChildren > 0 && Settings.limits.maxPanelChildren <= 255,
     "maxPanelChildren must be between 1 and 255 — iterator in UIPanel is uint8_t");
 static_assert(Settings.render.maxDrawCommands  > 0,  "maxDrawCommands must be > 0");

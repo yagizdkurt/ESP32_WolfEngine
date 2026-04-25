@@ -69,6 +69,6 @@ void GameObject::lateComponentTick() {
 
 void GameObject::preRenderComponentTick() {
     for (int i = 0; i < m_componentCount; i++)
-        if (m_components[i]) 
+        if (m_components[i] && m_components[i]->preRenderTickEnabled) 
             m_components[i]->preRenderTick();
 }

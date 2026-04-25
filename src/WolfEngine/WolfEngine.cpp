@@ -16,9 +16,8 @@ void WolfEngine::StartEngine() {
     // Module initialization
     ModuleSystem::InitAll();
 
-    // default initializations for convenience
-    BaseUIElement **defaultUI = new BaseUIElement*[1] { nullptr };
-    UI().setElements(defaultUI);
+    // default UI state: no registered elements
+    UI().clearElements();
 }
 
 void WolfEngine::StartGame() {
