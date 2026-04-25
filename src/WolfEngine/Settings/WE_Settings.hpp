@@ -139,6 +139,7 @@ inline constexpr EngineConfig Settings = {
     .limits = {
         .maxGameObjects   = 64,
         .maxPanelChildren = 10,
+        .maxPaletteInexes = 32,
     },
 
     // ── Debug ────────────────────────────────────────────────────────────────

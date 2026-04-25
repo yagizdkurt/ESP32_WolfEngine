@@ -49,10 +49,9 @@ bool Renderer::submitDrawCommand(const DrawCommand& cmd) {
 //  command fields. Handles rotation index math, transparency,
 //  and per-pixel bounds checking against the game region.
 // -------------------------------------------------------------
-void IRAM_ATTR Renderer::drawSpriteInternal(int16_t x, int16_t y,
-                                   const uint8_t*  pixels,
-                                   const uint16_t* palette,
-                                   int size, Rotation rotation) {
+void IRAM_ATTR Renderer::drawSpriteInternal(int16_t x, int16_t y, 
+    const uint8_t*  pixels, const uint16_t* palette, int size, Rotation rotation) 
+    {
     for (int py = 0; py < size; py++) {
         for (int px = 0; px < size; px++) {
 
@@ -74,9 +73,8 @@ void IRAM_ATTR Renderer::drawSpriteInternal(int16_t x, int16_t y,
                     break;
             }
 
-            // Skip transparent pixels (index 0)
             uint8_t paletteIndex = pixels[srcIndex];
-            if (paletteIndex == 0) continue;
+            if (paletteIndex == 0) continue; // transparent pixel — skip
 
             // Calculate screen pixel position
             int drawX = x + px;
@@ -86,9 +84,13 @@ void IRAM_ATTR Renderer::drawSpriteInternal(int16_t x, int16_t y,
             if (drawX < Settings.render.gameRegion.x1 || drawX >= Settings.render.gameRegion.x2) continue;
             if (drawY < Settings.render.gameRegion.y1 || drawY >= Settings.render.gameRegion.y2) continue;
 
-            // Palette lookup and write to framebuffer
-            uint16_t color = palette[paletteIndex];
+            // Palette lookup (array bounds checked by resolver returns 0x0000 transparent if out of bounds)
+            uint16_t color = ResolvePaletteColor(palette, paletteIndex);
+            if (color == 0x0000) continue;
+
+            // Byte swap if the display driver requires it (e.g. ST7735 expects RGB565 in BGR byte order)
             if (m_driver->requiresByteSwap) color = (color >> 8) | (color << 8);
+            // Write pixel to framebuffer
             m_framebuffer[drawY * RENDER_SCREEN_WIDTH + drawX] = color;
         }
     }
