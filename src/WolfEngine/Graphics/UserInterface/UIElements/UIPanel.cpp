@@ -3,7 +3,6 @@
 #include "WolfEngine/WolfEngine.hpp"
 
 UIPanel::UIPanel(int16_t x, int16_t y, int16_t w, int16_t h,
-                 BaseUIElement** ch,
                  uint16_t background,
                  bool backgroundEnabled,
                  uint8_t layer,
@@ -17,10 +16,12 @@ UIPanel::UIPanel(int16_t x, int16_t y, int16_t w, int16_t h,
     this->anchor            = anchor;
     this->background        = background;
     this->backgroundEnabled = backgroundEnabled;
-    if (ch) {
-        for (uint8_t i = 0; i < Settings.limits.maxPanelChildren && ch[i]; ++i)
-            this->children[i] = ch[i];
-    }
+}
+
+void UIPanel::clearChildren() {
+    for (uint8_t i = 0; i < m_childCount; ++i) children[i] = nullptr;
+    m_childCount = 0;
+    markDirty();
 }
 
 void UIPanel::setSize(int16_t width, int16_t height) { w = width; h = height; markDirty(); }
@@ -47,9 +48,9 @@ void UIPanel::draw(UIManager& mgr, int16_t offX, int16_t offY) {
         RenderSys().submitDrawCommand(bg);
     }
 
-    for (uint8_t i = 0; i < Settings.limits.maxPanelChildren; ++i) {
+    for (uint8_t i = 0; i < m_childCount; ++i) {
         BaseUIElement* child = children[i];
-        if (!child || child == this) continue;
+        if (child == this) continue;
         child->m_manager   = m_manager;
         uint8_t savedLayer = child->m_layer;
         child->m_layer     = m_layer + 1;

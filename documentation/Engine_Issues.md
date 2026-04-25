@@ -46,6 +46,16 @@ section added. Do not delete entries from this file — strike-through is not su
 
 ---
 
+## UIPanel Internal Child Storage Always Allocates maxPanelChildren Slots
+**Status:** Deferred
+**Severity:** Low
+**Location:** `src/WolfEngine/Graphics/UserInterface/UIPanel/WE_UIPanel.hpp` — `children[Settings.limits.maxPanelChildren]`
+**What it is:** `UIPanel` holds a fixed internal array sized to `maxPanelChildren` regardless of how many children are actually registered. Combined with the caller's `UIElementRef` array, every panel effectively pays 2x pointer storage — once in the caller's array (temporary) and once in the panel's internal copy.
+**Impact:** Each `UIPanel` instance always consumes `maxPanelChildren * 4` bytes of RAM whether it has 1 child or max children. With multiple panels and a generous `maxPanelChildren` setting, this adds up unnecessarily. On a RAM-constrained ESP32 this could become a problem if panel count or the cap grows.
+**Maintenance note:** When tuning `Settings.limits.maxPanelChildren`, remember every `UIPanel` instance pays that cost in full — not just panels that use many children. Keep the cap as tight as real usage requires. If panel count grows significantly in future, consider a two-field approach: a smaller `defaultChildSlots` for typical panels and a separate large-panel path, or simply audit actual max child usage across all panels before raising the cap.
+
+---
+
 ## Sort Key Y Byte is Architecturally Undersized
 **Status:** Deferred
 **Severity:** Medium

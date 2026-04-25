@@ -13,7 +13,7 @@ extern "C" void app_main() {
     Engine().StartEngine();
 
     // Register UI after StartEngine(), before StartGame().
-    UI().setElements(uiElements); // must be null-terminated
+    UI().setElements(uiElements); // UIElementRef[] (no nullptr entries)
 
     GameObject::Create<Player>();
 
@@ -30,7 +30,7 @@ extern "C" void app_main() {
 5. UI manager initialization
 6. Sound manager initialization
 7. Module system initialization
-8. Default UI registration with a `nullptr`-terminated empty list
+8. Default UI state reset via `UI().clearElements()`
 
 `StartGame()`:
 

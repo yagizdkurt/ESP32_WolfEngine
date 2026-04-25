@@ -62,6 +62,20 @@ if (!b) {
 
 ---
 
+## UI Element Limits
+
+```cpp
+.maxUIElements = 32,
+.maxPanelChildren = 10,
+```
+
+`maxUIElements` bounds the top-level `UI().setElements(...)` array length at compile time.
+`maxPanelChildren` bounds `UIPanel` child array length at compile time.
+
+Both values are validated with static assertions and must be in `1..255`.
+
+---
+
 ## Display Target
 
 ```cpp

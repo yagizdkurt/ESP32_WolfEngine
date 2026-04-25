@@ -143,6 +143,9 @@ inline constexpr EngineConfig Settings = {
     // ── Limits ───────────────────────────────────────────────────────────────
     .limits = {
         .maxGameObjects   = 64,
+        // Maximum top-level UI elements accepted by UI().setElements(...).
+        .maxUIElements    = 32,
+        // Maximum children per UIPanel.
         .maxPanelChildren = 10,
         .maxPaletteInexes = 32,
     },
@@ -154,6 +157,8 @@ inline constexpr EngineConfig Settings = {
 // ── Validation ───────────────────────────────────────────────────────────────
 static_assert(Settings.limits.maxGameObjects > 0 && Settings.limits.maxGameObjects <= 65535,
     "maxGameObjects must be between 1 and 65535 — live counter in WE_GORegistry is uint16_t");
+static_assert(Settings.limits.maxUIElements > 0 && Settings.limits.maxUIElements <= 255,
+    "maxUIElements must be between 1 and 255 — UIManager count is uint8_t");
 static_assert(Settings.limits.maxPanelChildren > 0 && Settings.limits.maxPanelChildren <= 255,
     "maxPanelChildren must be between 1 and 255 — iterator in UIPanel is uint8_t");
 static_assert(Settings.render.maxDrawCommands  > 0,  "maxDrawCommands must be > 0");

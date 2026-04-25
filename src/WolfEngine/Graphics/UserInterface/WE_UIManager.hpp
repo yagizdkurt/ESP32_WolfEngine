@@ -1,6 +1,8 @@
 #pragma once
+#include <cstddef>
 #include <stdint.h>
 #include "WolfEngine/Graphics/UserInterface/UIElements/WE_UIElements.hpp"
+#include "WolfEngine/Graphics/UserInterface/WE_UIElementRef.hpp"
 #include "WolfEngine/Graphics/RenderSystem/WE_RenderCore.hpp"
 
 // =============================================================
@@ -11,17 +13,12 @@
 //
 //  USAGE:
 //
-//  // Flash
-//  static const UITransform scoreTf = { 52, 12, true };
+//  // Elements
+//  static UILabel scoreLabel(4, 4, 96, 7, "Score: 0");
+//  static UILabel hpLabel(4, 16, 96, 7, "HP: 100");
 //
-//  // RAM
-//  static UILabelState scoreState = { "Score: 0" };
-//
-//  // Element
-//  static UILabel scoreLabel(&scoreTf, &scoreState);
-//
-//  // Array MUST be null-terminated — always end with nullptr
-//  static BaseUIElement* uiElements[] = { &scoreLabel, nullptr };
+//  // Non-null list. nullptr entries are compile-time errors.
+//  static UIElementRef uiElements[] = { scoreLabel, hpLabel };
 //
 //  // Before StartGame():
 //  engine.ui.setElements(uiElements);
@@ -30,12 +27,22 @@
 class Renderer;
 class UIManager {
 public:
-    void setElements(BaseUIElement** elements); // THIS MUST BE NULL TERMINATED!!! PLEASE DONT FORGET THIS
+    template <size_t N>
+    void setElements(const UIElementRef (&elements)[N]) {
+        static_assert(N <= Settings.limits.maxUIElements,
+            "UI element array exceeds Settings.limits.maxUIElements");
+        setElementsInternal(elements, static_cast<uint8_t>(N));
+    }
+
+    void clearElements();
+
     uint16_t* getFramebuffer() const { return m_framebuffer; }
     static constexpr int SCREEN_WIDTH = Renderer::SCREEN_WIDTH;
     static constexpr int SCREEN_HEIGHT = Renderer::SCREEN_HEIGHT;
 private:
-    BaseUIElement** m_elements    = nullptr;
+    void setElementsInternal(const UIElementRef* elements, uint8_t count);
+
+    BaseUIElement*  m_elements[Settings.limits.maxUIElements] = {};
     uint8_t         m_count       = 0;
     uint16_t*       m_framebuffer = nullptr;
     bool            m_dirty       = false;

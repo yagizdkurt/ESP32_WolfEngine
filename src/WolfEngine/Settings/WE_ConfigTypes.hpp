@@ -100,6 +100,7 @@ struct InputConfig {
 
 struct LimitsConfig {
     uint8_t maxGameObjects;
+    uint8_t maxUIElements;
     uint8_t maxPanelChildren;
     uint8_t maxPaletteInexes;
 };
