@@ -1,4 +1,5 @@
 #include "WE_Comp_SpriteRenderer.hpp"
+#include "WolfEngine/Utils/WE_MathUtils.h"
 #include "WolfEngine/GameObjectSystem/WE_GameObject.hpp"
 #include "WolfEngine/Graphics/RenderSystem/WE_Camera.hpp"
 #include "WolfEngine/WolfEngine.hpp"
@@ -37,10 +38,10 @@ void SpriteRenderer::onDraw() {
     cmd.x                = drawX;
     cmd.y                = drawY;
     cmd.flags            = cmdSetRotation(0, m_rotation);
-    uint8_t sortByte     = m_useSortKeyOverride
-                             ? static_cast<uint8_t>(m_sortKeyOverride)
-                             : static_cast<uint8_t>(drawY);
-    cmd.sortKey          = cmdMakeSortKey(static_cast<RenderLayer>(m_layer), sortByte);
+    uint8_t sortByte = m_useSortKeyOverride
+                         ? WE_Math::clampToByte(m_sortKeyOverride)
+                         : WE_Math::clampToByte(drawY);
+    cmd.sortKey      = cmdMakeSortKey(static_cast<RenderLayer>(m_layer), sortByte);
     cmd.sprite.pixels    = m_sprite->pixels;
     cmd.sprite.palette   = m_palette;
     cmd.sprite.size      = static_cast<uint8_t>(sz);

@@ -46,6 +46,16 @@ section added. Do not delete entries from this file — strike-through is not su
 
 ---
 
+## Sort Key Y Byte is Architecturally Undersized
+**Status:** Deferred
+**Severity:** Medium
+**Location:** `src/WolfEngine/ComponentSystem/Components/WE_Comp_SpriteRenderer.cpp` — sort key packing (lines 40-43); `src/WolfEngine/Utils/WE_MathUtils.h` — `clampToByte`
+**What it is:** The sort key packs screen Y into a single byte (`uint8_t`), giving a range of 0–255. Negative or large `int16_t` Y values are clamped before the cast to prevent modulo-256 aliasing. The clamp is correct for the current ESP32 target (~240px tall) but does not fix the underlying bit-width mismatch — it just makes truncation safe within current constraints.
+**Impact:** If the engine ever targets a higher-resolution display (>255px), uses world-space Y sorting, or needs sub-pixel precision, the 8-bit Y bucket silently collapses distinct positions into the same sort order. The `clampToByte` utility will mask the problem rather than surface it.
+**Maintenance note:** If the sort key struct is ever revisited, widen the Y field to 16 bits and promote `sortKey` from `uint16_t` to `uint32_t` — layout becomes `[layer:8][padding:8][screenY:16]` or similar. Remove `clampToByte` from the packing path at that point as it will no longer be needed.
+
+---
+
 ## Panel Children Anchor Assumption
 
 Status: Active
