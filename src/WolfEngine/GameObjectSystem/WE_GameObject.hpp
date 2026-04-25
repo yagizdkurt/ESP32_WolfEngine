@@ -184,6 +184,13 @@ public:
     // ---------------------------------------------------------
     virtual void Start() {}
 
+    //  ---------------------------------------------------------
+    //  Getters for object state
+    //  isUpdatable / IsDead / IsValid / IsActive
+    bool isUpdatable() { return !isDead && isActive; }
+    bool IsDead() const { return isDead; }
+    bool IsValid() const { return isValid; }
+    bool IsActive() const { return isActive; }
 
     // ---------------------------------------------------------
     //  Create<T> (static factory)
@@ -256,7 +263,6 @@ private:
 
     bool     isValid = false;
     bool     isDead = false;
-    bool isUpdatable() { return !isDead && isActive; }
 
     void earlyComponentTick();
     void componentTick();

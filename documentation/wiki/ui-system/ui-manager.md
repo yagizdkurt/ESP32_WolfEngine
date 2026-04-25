@@ -8,10 +8,11 @@ You access it through:
 UI().setElements(uiElements);
 ```
 
-The element list must be null-terminated.
+The element list is a fixed-size `UIElementRef[]` array.
+`nullptr` entries are not allowed.
 
 ```cpp
-static BaseUIElement* uiElements[] = { &scoreLabel, &healthLabel, nullptr };
+static UIElementRef uiElements[] = { scoreLabel, healthLabel };
 ```
 
 ---
@@ -27,7 +28,7 @@ Register UI elements after `StartEngine()` and before `StartGame()`.
 static UILabel scoreLabel(4, 4, 96, 7, "Score: 0", PL_GS_White, PALETTE_GRAYSCALE, 0, UIAnchor::TopLeft);
 static UILabel healthLabel(4, 16, 96, 7, "HP: 100", PL_GS_White, PALETTE_GRAYSCALE, 0, UIAnchor::TopLeft);
 
-static BaseUIElement* uiElements[] = { &scoreLabel, &healthLabel, nullptr };
+static UIElementRef uiElements[] = { scoreLabel, healthLabel };
 
 extern "C" void app_main() {
     Engine().StartEngine();
@@ -41,15 +42,21 @@ extern "C" void app_main() {
 ## setElements
 
 ```cpp
-UI().setElements(BaseUIElement** elements);
+template <size_t N>
+UI().setElements(const UIElementRef (&elements)[N]);
 ```
 
 What it does:
 
-1. Stores the list and counts entries until `nullptr`
+1. Copies the list into internal fixed storage using the compile-time array size `N`
 2. Wires each element to the manager pointer
 3. Assigns each element draw metadata (`m_drawOrder`, `m_layer`)
 4. Marks UI dirty if renderer/framebuffer has already been initialized
+
+Bound rule:
+
+- `N` must be `<= Settings.limits.maxUIElements` (compile-time checked)
+- Use `UI().clearElements()` to unregister everything
 
 ---
 

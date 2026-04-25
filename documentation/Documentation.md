@@ -283,7 +283,9 @@ screen pixels.
 **Public interface:**
 ```cpp
 WEUIManager& UI();
-void setElements(BaseUIElement** nullTerminated);
+template <size_t N>
+void setElements(const UIElementRef (&elements)[N]);
+void clearElements();
 void render();   // called by engine each frame
 ```
 
@@ -302,6 +304,8 @@ BaseUIElement  (show/hide, dirty flag, layout fields x/y/w/h/layer/anchor, comma
 - `UILabel`, `UIShape`, and `UIPanel` expose explicit constructors for one-line static declarations.
 - `UILabelState`, `UIShapeState`, and `UIPanelState` are removed from the public API.
 - UI element types are not aggregate classes under C++20; use constructors instead.
+- Top-level UI registration is array-size based (`N`) and compile-time bounded by `Settings.limits.maxUIElements`.
+- `UIElementRef` forbids pointer/nullptr construction, so null entries do not compile.
 - Dirty flag is manager-level for change tracking. Current renderer invokes UI pass every frame, and UIManager draws all registered elements per pass.
 - Font is a static 5×7 bitmap array (`WE_Font.hpp`) covering ASCII 32–126.
 
@@ -309,8 +313,10 @@ BaseUIElement  (show/hide, dirty flag, layout fields x/y/w/h/layer/anchor, comma
 ```cpp
 static UILabel title(4, 2, 120, 7, "WOLFENGINE UI TEST", PL_GS_White, PALETTE_GRAYSCALE, 0, UIAnchor::TopLeft);
 static UIShape divider(4, 11, 120, 1, UIShapeType::HLine, true, PL_GS_White, PALETTE_GRAYSCALE, 0, UIAnchor::TopLeft);
-static BaseUIElement* panelChildren[] = { &title, &divider, nullptr };
+static UIElementRef panelChildren[] = { title, divider };
 static UIPanel panel(0, -24, 128, 24, panelChildren, 0x0000, true, 1, UIAnchor::BotLeft);
+static UIElementRef uiElements[] = { panel };
+UI().setElements(uiElements);
 ```
 
 

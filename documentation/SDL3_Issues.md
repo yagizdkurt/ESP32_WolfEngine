@@ -90,22 +90,6 @@ platform differences.
 
 ---
 
-## vTaskDelay Declared in FreeRTOS.h Instead of task.h
-
-**Status:** Active
-**Phase found:** Phase 1
-**Phase to fix:** TBD
-**Severity:** Medium
-**Location:** `desktop/stubs/freertos/FreeRTOS.h`
-**What it does now:** `vTaskDelay` is defined directly in `FreeRTOS.h`. In real
-FreeRTOS it lives in `task.h` — `FreeRTOS.h` only provides core primitives.
-**Impact:** Any engine source file that calls `vTaskDelay` but only includes
-`<freertos/FreeRTOS.h>` (not `<freertos/task.h>`) will compile cleanly on desktop
-but fail on hardware where the symbol is absent from `FreeRTOS.h`. This masks a
-missing-include class of bug.
-
----
-
 ## Semaphore Create Functions Return nullptr
 
 **Status:** Active

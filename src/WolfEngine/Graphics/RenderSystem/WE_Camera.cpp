@@ -45,7 +45,7 @@ void Camera::follow(Vec2 target)                    { m_position = target; }
 void Camera::followSmooth(Vec2 target, float speed) { m_position = lerp(m_position, target, speed); }
 
 void Camera::followTick() {
-    if (!m_target) return;
+    if (!m_target || !m_target->IsActive() || m_target->IsDead()) return;
 
     Vec2 target_pos = m_target->transform.position;
 

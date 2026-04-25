@@ -120,3 +120,31 @@
 #include "WE_Palette_Cool.hpp"
 #include "WE_Palette_GameBoy.hpp"
 #include "WE_Palette_Sunset.hpp"
+
+
+/**
+ * @brief Resolves a palette index into an RGB565 color with engine-safe semantics.
+ *
+ * This helper centralizes palette lookup rules used by sprite/UI rendering:
+ * - Index `0` is always treated as transparent and returns `0x0000`.
+ * - Non-zero indices are expected to be within configured palette bounds.
+ * - Out-of-bounds indices are treated as transparent, logged, and asserted in debug paths.
+ *
+ * @param palette Pointer to a palette table containing RGB565 entries.
+ * @param index Palette index encoded in sprite/UI pixel data.
+ *
+ * @return RGB565 color value for valid non-zero indices.
+ * @return `0x0000` when index is transparent (`0`) or invalid/out-of-range.
+ *
+ * @note This function is intentionally defensive: it prevents undefined reads when
+ * invalid asset data slips through and makes the error visible via logging/assert.
+ */
+inline uint16_t ResolvePaletteColor(const uint16_t* palette, uint8_t index) {
+    if (index == 0) return 0x0000; // transparent
+    if (index >= Settings.limits.maxPaletteInexes){
+        ESP_LOGW("Renderer:", "Palette index %u out of bounds — treated as transparent", index);
+        assert(false); // catch invalid palette indexes in testing — likely a bug in client code
+        return 0x0000; // treat out-of-bounds indexes as transparent
+    }
+    return palette[index];
+}

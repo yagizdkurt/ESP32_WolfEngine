@@ -15,7 +15,3 @@
 typedef uint32_t TickType_t;
 typedef uint32_t UBaseType_t;
 typedef int      BaseType_t;
-
-// vTaskDelay lives here in real FreeRTOS (via task.h) but many files
-// include only FreeRTOS.h and rely on it being dragged in transitively.
-inline void vTaskDelay(TickType_t) {}

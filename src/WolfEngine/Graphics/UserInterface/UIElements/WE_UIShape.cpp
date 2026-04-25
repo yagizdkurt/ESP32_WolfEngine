@@ -51,7 +51,7 @@ void UIShape::draw(UIManager& mgr, int16_t offX, int16_t offY) {
     rect.y += offY;
     const int16_t  shapeW = w;
     const int16_t  shapeH = h;
-    const uint16_t color  = palette[colorIndex];
+    const uint16_t color  = ResolvePaletteColor(palette, colorIndex);
 
     // Shape-aware early-out: HLine only needs a valid width,
     // VLine only needs a valid height.

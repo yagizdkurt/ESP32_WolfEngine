@@ -81,7 +81,7 @@ public:
 
 private:
     void onDraw();
-    void tick() override;
+    void preRenderTick() override;
 
     class GameObject*  m_owner;
     const Sprite*      m_sprite;

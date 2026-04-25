@@ -29,7 +29,7 @@ void UILabel::draw(UIManager& mgr, int16_t offX, int16_t offY) {
     UIRect rect = resolveRect();
     rect.x += offX;
     rect.y += offY;
-    const uint16_t color = palette[colorIndex];
+    const uint16_t color = ResolvePaletteColor(palette, colorIndex);
 
     DrawCommand cmd;
     cmd.type             = DrawCommandType::TextRun;
