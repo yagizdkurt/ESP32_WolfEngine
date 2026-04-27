@@ -1,9 +1,8 @@
 #include "WolfEngine/Graphics/RenderSystem/WE_RenderCore.hpp"
 #include "WolfEngine/Graphics/RenderSystem/WE_Camera.hpp"
 #include "WolfEngine/Graphics/UserInterface/Fonts/WE_Font.hpp"
+#include "WolfEngine/Utilities/WE_Debug.hpp"
 #include "WolfEngine/WolfEngine.hpp"
-#include "esp_log.h"
-#include <cassert>
 
 #ifndef IRAM_ATTR
 #define IRAM_ATTR
@@ -11,9 +10,9 @@
 
 void Renderer::initialize() {
     m_driver->initialize();
-    assert(m_driver->screenWidth  == Settings.render.screenWidth  &&
-           m_driver->screenHeight == Settings.render.screenHeight &&
-           "Driver dimensions do not match Settings.render screen size");
+    WE_ASSERT(m_driver->screenWidth  == Settings.render.screenWidth &&
+              m_driver->screenHeight == Settings.render.screenHeight,
+              "Driver dimensions do not match Settings.render screen size");
 }
 
 
@@ -37,7 +36,7 @@ void Renderer::clearCommands() {
 bool Renderer::submitDrawCommand(const DrawCommand& cmd) {
     if (m_commandCount >= Settings.render.maxDrawCommands) {
         if (m_diagnostics.commandsDropped == 0) {
-            ESP_LOGW("Renderer", "Draw command buffer full — first drop this frame");
+            WE_LOGW("Renderer", "Draw command buffer full — first drop this frame");
         }
         m_diagnostics.commandsDropped++;
         return false;
@@ -294,7 +293,7 @@ void Renderer::executeCommands() {
                 break;
             }
             default:
-                ESP_LOGW("Renderer", "Unknown DrawCommandType — command skipped");
+                WE_LOGW("Renderer", "Unknown DrawCommandType — command skipped");
                 break;
         }
     }

@@ -1,7 +1,8 @@
 #include "WE_Comp_SpriteRenderer.hpp"
-#include "WolfEngine/Utils/WE_MathUtils.h"
+#include "WolfEngine/Utilities/WE_MathUtilities.hpp"
 #include "WolfEngine/GameObjectSystem/WE_GameObject.hpp"
 #include "WolfEngine/Graphics/RenderSystem/WE_Camera.hpp"
+#include "WolfEngine/Utilities/WE_Debug.hpp"
 #include "WolfEngine/WolfEngine.hpp"
 
 SpriteRenderer::SpriteRenderer(GameObject* owner, const Sprite* sprite, RenderLayer layer)
@@ -10,14 +11,62 @@ SpriteRenderer::SpriteRenderer(GameObject* owner, const Sprite* sprite, RenderLa
     , m_layer   (static_cast<uint8_t>(layer))
 {
     type        = COMP_SPRITE;
-    tickEnabled = true;  // base class defaults to false — must be set explicitly
+    preRenderTickEnabled = true;  // base class defaults to false — must be set explicitly
     owner->registerComponent(this);
 }
 
-void SpriteRenderer::preRenderTick() { if constexpr (Settings.render.spriteSystemEnabled) onDraw(); }
+void SpriteRenderer::setPaletteOverride(const uint16_t* palette) {
+    m_paletteOverride = palette;
+    m_usePaletteOverride = (palette != nullptr);
+    m_useTimedPaletteOverride = false;
+    m_paletteOverrideDurationMs = 0;
+    m_paletteOverrideTimer.stop();
+}
+
+void SpriteRenderer::clearPaletteOverride() {
+    m_paletteOverride = nullptr;
+    m_usePaletteOverride = false;
+    m_useTimedPaletteOverride = false;
+    m_paletteOverrideDurationMs = 0;
+    m_paletteOverrideTimer.stop();
+}
+
+void SpriteRenderer::setPaletteOverrideForSeconds(float seconds, const uint16_t* palette) {
+    if (palette == nullptr || seconds <= 0.0f) {
+        clearPaletteOverride();
+        return;
+    }
+    setPaletteOverride(palette);
+    m_useTimedPaletteOverride = true;
+    m_paletteOverrideDurationMs = static_cast<int64_t>(seconds * 1000.0f + 0.5f);
+    m_paletteOverrideTimer.start();
+}
+
+void SpriteRenderer::setPaletteOverrideForTicks(uint32_t tickCount, const uint16_t* palette) {
+    setPaletteOverrideForSeconds(static_cast<float>(tickCount) * WETime::DELTA_TIME, palette);
+}
+
+void SpriteRenderer::preRenderTick() {
+    if (m_useTimedPaletteOverride &&
+        m_paletteOverrideTimer.elapsed(m_paletteOverrideDurationMs)) {
+        clearPaletteOverride();
+    }
+    if constexpr (Settings.render.spriteSystemEnabled) onDraw();
+}
 
 void SpriteRenderer::onDraw() {
     if (!m_visible || !m_sprite) return;
+
+    const uint8_t* pixels = m_sprite->pixels;
+    const uint16_t* selectedPalette = m_usePaletteOverride ? m_paletteOverride : m_sprite->palette;
+
+    if (pixels == nullptr || selectedPalette == nullptr) { // Validitiy check: sprite data must not be null
+        WE_LOGE("SpriteRenderer", "Invalid sprite pointers (sprite=%p pixels=%p palette=%p override=%d)",
+                static_cast<const void*>(m_sprite), static_cast<const void*>(pixels),
+                static_cast<const void*>(selectedPalette), m_usePaletteOverride ? 1 : 0);
+        WE_ASSERT(false, "SpriteRenderer: pixels/palette pointer must not be null");
+        return;
+    }
 
     const int W  = m_sprite->width;
     const int H  = m_sprite->height;
@@ -70,8 +119,8 @@ void SpriteRenderer::onDraw() {
                           ? WE_Math::clampToByte(m_sortKeyOverride)
                           : WE_Math::clampToByte(topY);
     cmd.sortKey       = cmdMakeSortKey(static_cast<RenderLayer>(m_layer), sortByte);
-    cmd.sprite.pixels  = m_sprite->pixels;
-    cmd.sprite.palette = m_sprite->palette;
+    cmd.sprite.pixels  = pixels;
+    cmd.sprite.palette = selectedPalette;
     cmd.sprite.width   = static_cast<uint8_t>(W);
     cmd.sprite.height  = static_cast<uint8_t>(H);
 

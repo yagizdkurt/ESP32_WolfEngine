@@ -1,0 +1,198 @@
+﻿[meta]
+name = "PALETTE_GRAYSCALE"
+enum = "Grayscale"
+header = "WE_Palette_Grayscale.hpp"
+description = "31 shades from near-black to white. Useful for UI, shadows, monochrome sprites, and debug visuals."
+
+[[color]]
+index = 0
+name = "Transparent"
+enum = "PL_GS_Transparent"
+rgb = [0, 0, 0]
+
+[[color]]
+index = 1
+name = "Shade 1"
+enum = "PL_GS_Shade1"
+rgb = [8, 8, 8]
+
+[[color]]
+index = 2
+name = "Shade 2"
+enum = "PL_GS_Shade2"
+rgb = [16, 16, 16]
+
+[[color]]
+index = 3
+name = "Shade 3"
+enum = "PL_GS_Shade3"
+rgb = [24, 24, 24]
+
+[[color]]
+index = 4
+name = "Shade 4"
+enum = "PL_GS_Shade4"
+rgb = [33, 32, 33]
+
+[[color]]
+index = 5
+name = "Shade 5"
+enum = "PL_GS_Shade5"
+rgb = [41, 40, 41]
+
+[[color]]
+index = 6
+name = "Shade 6"
+enum = "PL_GS_Shade6"
+rgb = [49, 52, 49]
+
+[[color]]
+index = 7
+name = "Shade 7"
+enum = "PL_GS_Shade7"
+rgb = [57, 60, 57]
+
+[[color]]
+index = 8
+name = "Shade 8"
+enum = "PL_GS_Shade8"
+rgb = [66, 69, 66]
+
+[[color]]
+index = 9
+name = "Shade 9"
+enum = "PL_GS_Shade9"
+rgb = [74, 77, 74]
+
+[[color]]
+index = 10
+name = "Shade 10"
+enum = "PL_GS_Shade10"
+rgb = [82, 85, 82]
+
+[[color]]
+index = 11
+name = "Shade 11"
+enum = "PL_GS_Shade11"
+rgb = [90, 93, 90]
+
+[[color]]
+index = 12
+name = "Shade 12"
+enum = "PL_GS_Shade12"
+rgb = [99, 101, 99]
+
+[[color]]
+index = 13
+name = "Shade 13"
+enum = "PL_GS_Shade13"
+rgb = [107, 109, 107]
+
+[[color]]
+index = 14
+name = "Mid Gray"
+enum = "PL_GS_MidGray"
+rgb = [115, 113, 115]
+
+[[color]]
+index = 15
+name = "Shade 15"
+enum = "PL_GS_Shade15"
+rgb = [123, 121, 123]
+
+[[color]]
+index = 16
+name = "Shade 16"
+enum = "PL_GS_Shade16"
+rgb = [132, 130, 132]
+
+[[color]]
+index = 17
+name = "Shade 17"
+enum = "PL_GS_Shade17"
+rgb = [140, 138, 140]
+
+[[color]]
+index = 18
+name = "Shade 18"
+enum = "PL_GS_Shade18"
+rgb = [148, 146, 148]
+
+[[color]]
+index = 19
+name = "Shade 19"
+enum = "PL_GS_Shade19"
+rgb = [156, 154, 156]
+
+[[color]]
+index = 20
+name = "Shade 20"
+enum = "PL_GS_Shade20"
+rgb = [165, 162, 165]
+
+[[color]]
+index = 21
+name = "Shade 21"
+enum = "PL_GS_Shade21"
+rgb = [173, 170, 173]
+
+[[color]]
+index = 22
+name = "Shade 22"
+enum = "PL_GS_Shade22"
+rgb = [181, 178, 181]
+
+[[color]]
+index = 23
+name = "Shade 23"
+enum = "PL_GS_Shade23"
+rgb = [189, 186, 189]
+
+[[color]]
+index = 24
+name = "Shade 24"
+enum = "PL_GS_Shade24"
+rgb = [198, 195, 198]
+
+[[color]]
+index = 25
+name = "Shade 25"
+enum = "PL_GS_Shade25"
+rgb = [206, 203, 206]
+
+[[color]]
+index = 26
+name = "Shade 26"
+enum = "PL_GS_Shade26"
+rgb = [214, 211, 214]
+
+[[color]]
+index = 27
+name = "Shade 27"
+enum = "PL_GS_Shade27"
+rgb = [222, 219, 222]
+
+[[color]]
+index = 28
+name = "Shade 28"
+enum = "PL_GS_Shade28"
+rgb = [231, 227, 231]
+
+[[color]]
+index = 29
+name = "Shade 29"
+enum = "PL_GS_Shade29"
+rgb = [239, 235, 239]
+
+[[color]]
+index = 30
+name = "Shade 30"
+enum = "PL_GS_Shade30"
+rgb = [247, 243, 247]
+
+[[color]]
+index = 31
+name = "White"
+enum = "PL_GS_White"
+rgb = [255, 255, 255]
+

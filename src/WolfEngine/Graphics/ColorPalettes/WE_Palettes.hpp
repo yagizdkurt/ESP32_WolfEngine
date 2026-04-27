@@ -1,4 +1,5 @@
 #pragma once
+#include "WolfEngine/Utilities/WE_Debug.hpp"
 
 // =============================================================
 //  WolfEngine Color Palette System — Master Include & Documentation
@@ -142,8 +143,8 @@
 inline uint16_t ResolvePaletteColor(const uint16_t* palette, uint8_t index) {
     if (index == 0) return 0x0000; // transparent
     if (index >= Settings.limits.maxPaletteInexes){
-        ESP_LOGW("Renderer:", "Palette index %u out of bounds — treated as transparent", index);
-        assert(false); // catch invalid palette indexes in testing — likely a bug in client code
+        WE_LOGW("Renderer", "Palette index %u out of bounds — treated as transparent", index);
+        WE_ASSERT(false, "Palette index out of bounds");
         return 0x0000; // treat out-of-bounds indexes as transparent
     }
     return palette[index];

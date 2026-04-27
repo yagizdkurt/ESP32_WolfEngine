@@ -67,5 +67,7 @@ private:
 };
 
 #else
-#error "WE_Comp_Collider.hpp requires WE_MODULE_COLLISION — enable it in WE_Settings.hpp"
+    template<bool Enabled = false> struct ColliderDisabled {
+    static_assert(Enabled, "Collider is disabled — enable WE_MODULE_COLLISION in WE_Settings.hpp to use it");};
+    using Collider = ColliderDisabled<>;
 #endif // WE_MODULE_COLLISION

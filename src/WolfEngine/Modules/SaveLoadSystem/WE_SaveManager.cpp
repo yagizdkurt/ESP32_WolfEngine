@@ -1,6 +1,5 @@
-#define MODULE_DEBUG_ENABLED  // comment out to silence all SaveManager log output
 #include "WE_SaveManager.hpp"
-#include "WolfEngine/Utilities/WE_Debug.h"
+#include "WolfEngine/Utilities/WE_Debug.hpp"
 #include <new>
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -22,14 +21,14 @@ void WE_SaveManager::OnInit() {
             //     break;
         }
         m_eeproms[i] = reinterpret_cast<WE_IEEPROMDriver*>(m_driverBufs[i]);
-        DebugLog("SaveManager", "EEPROM[%u] type=%u addr=0x%02X capacity=%lu B",
+        WE_LOGI("SaveManager", "EEPROM[%u] type=%u addr=0x%02X capacity=%lu B",
                  i,
                  static_cast<uint8_t>(WE_SAVE_EEPROMS[i].type),
                  WE_SAVE_EEPROMS[i].i2cAddr,
                  static_cast<unsigned long>(WE_GetEEPROMCapacity(WE_SAVE_EEPROMS[i].type)));
     }
 
-    DebugLog("SaveManager", "init complete — %u chip(s), %u slot(s), integrity=%s",
+    WE_LOGI("SaveManager", "init complete — %u chip(s), %u slot(s), integrity=%s",
              WE_SAVE_EEPROM_COUNT,
              static_cast<uint8_t>(SAVE_SLOT_COUNT),
              WE_SAVE_INTEGRITY ? "ON" : "OFF");
@@ -70,14 +69,14 @@ esp_err_t WE_SaveManager::erase(SaveSlot slot) {
         uint16_t chunk = (len - written < CHUNK) ? (len - written) : CHUNK;
         esp_err_t err = m_eeproms[eidx]->writeBytes(addr + written, blank, chunk);
         if (err != ESP_OK) {
-            DebugErr("SaveManager", "erase slot %u failed at offset %u: err=0x%x",
+            WE_LOGE("SaveManager", "erase slot %u failed at offset %u: err=0x%x",
                      static_cast<uint8_t>(slot), written, err);
             return err;
         }
         written += chunk;
     }
 
-    DebugLog("SaveManager", "erased slot %u ('%s') %u bytes on EEPROM[%u]",
+    WE_LOGI("SaveManager", "erased slot %u ('%s') %u bytes on EEPROM[%u]",
              static_cast<uint8_t>(slot), SAVE_SLOTS[slot].name, len, eidx);
     return ESP_OK;
 }
@@ -85,14 +84,14 @@ esp_err_t WE_SaveManager::erase(SaveSlot slot) {
 esp_err_t WE_SaveManager::eraseAll() {
     if constexpr (WE_SAVE_EEPROM_COUNT == 0 || WE_SAVE_EEPROMS[0].type == EEPROMDriverType::EEPROM_NONE) return ESP_ERR_INVALID_ARG;
 
-    DebugLog("SaveManager", "erasing all %u EEPROM chip(s)...", WE_SAVE_EEPROM_COUNT);
+    WE_LOGI("SaveManager", "erasing all %u EEPROM chip(s)...", WE_SAVE_EEPROM_COUNT);
     for (uint8_t i = 0; i < WE_SAVE_EEPROM_COUNT; i++) {
         esp_err_t err = m_eeproms[i]->eraseAll();
         if (err != ESP_OK) {
-            DebugErr("SaveManager", "eraseAll failed on EEPROM[%u]: err=0x%x", i, err);
+            WE_LOGE("SaveManager", "eraseAll failed on EEPROM[%u]: err=0x%x", i, err);
             return err;
         }
-        DebugLog("SaveManager", "EEPROM[%u] erased", i);
+        WE_LOGI("SaveManager", "EEPROM[%u] erased", i);
     }
     return ESP_OK;
 }

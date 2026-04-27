@@ -20,7 +20,7 @@
 //  deduces width and height automatically. Rectangular sprites are
 //  fully supported.
 //
-//  VALID SIZES: width 1–63, height 1–63 (independently)
+//  VALID SIZES: width 1–96, height 1–96 (independently)
 //
 //  NOTE: Pixel arrays must be declared as separate constexpr variables.
 //  Inline initializer lists are not supported — the pixel pointer would
@@ -55,8 +55,8 @@ struct Sprite {
     template<uint8_t H, uint8_t W, uint8_t AX = W / 2, uint8_t AY = H / 2>
     static consteval Sprite Create(const uint8_t (&pixels)[H][W],
                                    const uint16_t* palette) {
-        static_assert(W > 0 && W <= 63, "width must be between 1 and 63");
-        static_assert(H > 0 && H <= 63, "height must be between 1 and 63");
+        static_assert(W > 0 && W <= 96, "width must be between 1 and 96");
+        static_assert(H > 0 && H <= 96, "height must be between 1 and 96");
         static_assert(AX < W,           "anchorX must be < width");
         static_assert(AY < H,           "anchorY must be < height");
         return { &pixels[0][0], palette, W, H, AX, AY };
@@ -83,8 +83,8 @@ struct Sprite {
     template<uint8_t H, uint8_t W, uint8_t AX = W / 2, uint8_t AY = H / 2>
     static constexpr Sprite DynamicCreate(const uint8_t (&pixels)[H][W],
                                           const uint16_t* palette) {
-        static_assert(W > 0 && W <= 63, "width must be between 1 and 63");
-        static_assert(H > 0 && H <= 63, "height must be between 1 and 63");
+        static_assert(W > 0 && W <= 96, "width must be between 1 and 96");
+        static_assert(H > 0 && H <= 96, "height must be between 1 and 96");
         static_assert(AX < W,           "anchorX must be < width");
         static_assert(AY < H,           "anchorY must be < height");
         return { &pixels[0][0], palette, W, H, AX, AY };

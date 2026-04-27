@@ -1,17 +1,18 @@
 # Ignore everything...
 *
 
-# other than...
-# specific top-level files,
+# other than specific top-level files...
 !.gitignore
 !LICENSE
 !README.md
 !platformio.ini
 !cxx_only_flags.py
+!run_asset_converter.py
 !mkdocs.yml
 !Contributing.md
+!CmakeLists.txt
 
-# ProjectFolders
+# And project folders...
 !IconsPhotosEtc/
 !IconsPhotosEtc/**
 !src/
@@ -22,13 +23,18 @@
 !desktop/**
 !.github/
 !.github/**
-
-# PlatformIO Special Folders
+!tools/
+!tools/**
+!Images/
 !test/
-!test/**
 
-# Exclude build output
+# then exclude build and game specific sources...
 desktop/build/
-
-# Exlcude game spesific soruces
 src/GameCode/**
+src/GeneratedAssets/**
+Images/**
+
+#but not config files in those folders...
+!Images/assets.toml
+!src/GeneratedAssets/Readme.md
+!test/readme.md

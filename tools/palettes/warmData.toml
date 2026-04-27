@@ -1,0 +1,198 @@
+﻿[meta]
+name = "PALETTE_WARM"
+enum = "Warm"
+header = "WE_Palette_Warm.hpp"
+description = "Reds, oranges, yellows, earth tones, and warm neutrals. Useful for fire, lava, desert, autumn, and warm-lit scenes."
+
+[[color]]
+index = 0
+name = "Transparent"
+enum = "PL_WM_Transparent"
+rgb = [0, 0, 0]
+
+[[color]]
+index = 1
+name = "Near Black Red"
+enum = "PL_WM_NearBlackRed"
+rgb = [33, 0, 0]
+
+[[color]]
+index = 2
+name = "Very Dark Red"
+enum = "PL_WM_VeryDarkRed"
+rgb = [49, 0, 0]
+
+[[color]]
+index = 3
+name = "Dark Maroon"
+enum = "PL_WM_DarkMaroon"
+rgb = [82, 0, 0]
+
+[[color]]
+index = 4
+name = "Dark Red"
+enum = "PL_WM_DarkRed"
+rgb = [132, 0, 0]
+
+[[color]]
+index = 5
+name = "Med Dark Red"
+enum = "PL_WM_MedDarkRed"
+rgb = [165, 0, 0]
+
+[[color]]
+index = 6
+name = "Rust"
+enum = "PL_WM_Rust"
+rgb = [181, 65, 8]
+
+[[color]]
+index = 7
+name = "Medium Red"
+enum = "PL_WM_MediumRed"
+rgb = [198, 0, 0]
+
+[[color]]
+index = 8
+name = "Pure Red"
+enum = "PL_WM_PureRed"
+rgb = [255, 0, 0]
+
+[[color]]
+index = 9
+name = "Red Orange"
+enum = "PL_WM_RedOrange"
+rgb = [255, 24, 0]
+
+[[color]]
+index = 10
+name = "Dark Orange"
+enum = "PL_WM_DarkOrange"
+rgb = [255, 142, 0]
+
+[[color]]
+index = 11
+name = "Orange"
+enum = "PL_WM_Orange"
+rgb = [255, 146, 0]
+
+[[color]]
+index = 12
+name = "Med Orange"
+enum = "PL_WM_MedOrange"
+rgb = [255, 162, 0]
+
+[[color]]
+index = 13
+name = "Bright Orange"
+enum = "PL_WM_BrightOrange"
+rgb = [255, 166, 0]
+
+[[color]]
+index = 14
+name = "Amber Dark"
+enum = "PL_WM_AmberDark"
+rgb = [255, 195, 0]
+
+[[color]]
+index = 15
+name = "Amber"
+enum = "PL_WM_Amber"
+rgb = [255, 227, 0]
+
+[[color]]
+index = 16
+name = "Gold Dark"
+enum = "PL_WM_GoldDark"
+rgb = [255, 247, 0]
+
+[[color]]
+index = 17
+name = "Yellow"
+enum = "PL_WM_Yellow"
+rgb = [255, 255, 0]
+
+[[color]]
+index = 18
+name = "Gold"
+enum = "PL_WM_Gold"
+rgb = [255, 215, 0]
+
+[[color]]
+index = 19
+name = "Dark Gold"
+enum = "PL_WM_DarkGold"
+rgb = [255, 174, 0]
+
+[[color]]
+index = 20
+name = "Dark Sienna"
+enum = "PL_WM_DarkSienna"
+rgb = [132, 81, 33]
+
+[[color]]
+index = 21
+name = "Sienna"
+enum = "PL_WM_Sienna"
+rgb = [165, 81, 41]
+
+[[color]]
+index = 22
+name = "Light Sienna"
+enum = "PL_WM_LightSienna"
+rgb = [198, 89, 49]
+
+[[color]]
+index = 23
+name = "Dark Brown"
+enum = "PL_WM_DarkBrown"
+rgb = [99, 65, 33]
+
+[[color]]
+index = 24
+name = "Med Brown"
+enum = "PL_WM_MedBrown"
+rgb = [132, 65, 49]
+
+[[color]]
+index = 25
+name = "Light Brown"
+enum = "PL_WM_LightBrown"
+rgb = [165, 69, 66]
+
+[[color]]
+index = 26
+name = "Wheat"
+enum = "PL_WM_Wheat"
+rgb = [247, 223, 181]
+
+[[color]]
+index = 27
+name = "Salmon"
+enum = "PL_WM_Salmon"
+rgb = [255, 130, 115]
+
+[[color]]
+index = 28
+name = "Light Salmon"
+enum = "PL_WM_LightSalmon"
+rgb = [255, 117, 107]
+
+[[color]]
+index = 29
+name = "Peach"
+enum = "PL_WM_Peach"
+rgb = [255, 125, 82]
+
+[[color]]
+index = 30
+name = "Light Peach"
+enum = "PL_WM_LightPeach"
+rgb = [255, 158, 156]
+
+[[color]]
+index = 31
+name = "Cream"
+enum = "PL_WM_Cream"
+rgb = [255, 255, 214]
+

@@ -1,0 +1,198 @@
+﻿[meta]
+name = "PALETTE_SUNSET"
+enum = "Sunset"
+header = "WE_Palette_Sunset.hpp"
+description = "Deep purples, magentas, oranges, and warm pinks. Useful for evening scenes, neon/synthwave aesthetics, and dramatic sky or background gradients."
+
+[[color]]
+index = 0
+name = "Transparent"
+enum = "PL_SS_Transparent"
+rgb = [0, 0, 0]
+
+[[color]]
+index = 1
+name = "Near Black Purple"
+enum = "PL_SS_NearBlackPurple"
+rgb = [16, 0, 66]
+
+[[color]]
+index = 2
+name = "Very Dark Indigo"
+enum = "PL_SS_VeryDarkIndigo"
+rgb = [24, 0, 132]
+
+[[color]]
+index = 3
+name = "Dark Indigo"
+enum = "PL_SS_DarkIndigo"
+rgb = [33, 0, 132]
+
+[[color]]
+index = 4
+name = "Deep Indigo"
+enum = "PL_SS_DeepIndigo"
+rgb = [49, 0, 123]
+
+[[color]]
+index = 5
+name = "Deep Purple"
+enum = "PL_SS_DeepPurple"
+rgb = [66, 0, 123]
+
+[[color]]
+index = 6
+name = "Purple Dark"
+enum = "PL_SS_PurpleDark"
+rgb = [90, 0, 123]
+
+[[color]]
+index = 7
+name = "Purple"
+enum = "PL_SS_Purple"
+rgb = [107, 0, 123]
+
+[[color]]
+index = 8
+name = "Med Purple"
+enum = "PL_SS_MedPurple"
+rgb = [123, 0, 123]
+
+[[color]]
+index = 9
+name = "Purple Mid"
+enum = "PL_SS_PurpleMid"
+rgb = [140, 0, 123]
+
+[[color]]
+index = 10
+name = "Violet"
+enum = "PL_SS_Violet"
+rgb = [156, 0, 123]
+
+[[color]]
+index = 11
+name = "Violet Bright"
+enum = "PL_SS_VioletBright"
+rgb = [173, 0, 123]
+
+[[color]]
+index = 12
+name = "Magenta Purple"
+enum = "PL_SS_MagentaPurple"
+rgb = [189, 0, 189]
+
+[[color]]
+index = 13
+name = "Dark Magenta"
+enum = "PL_SS_DarkMagenta"
+rgb = [206, 0, 255]
+
+[[color]]
+index = 14
+name = "Pure Magenta"
+enum = "PL_SS_PureMagenta"
+rgb = [255, 0, 255]
+
+[[color]]
+index = 15
+name = "Bright Magenta"
+enum = "PL_SS_BrightMagenta"
+rgb = [255, 32, 255]
+
+[[color]]
+index = 16
+name = "Hot Pink"
+enum = "PL_SS_HotPink"
+rgb = [255, 32, 123]
+
+[[color]]
+index = 17
+name = "Pink Dark"
+enum = "PL_SS_PinkDark"
+rgb = [255, 44, 123]
+
+[[color]]
+index = 18
+name = "Pink"
+enum = "PL_SS_Pink"
+rgb = [255, 52, 123]
+
+[[color]]
+index = 19
+name = "Med Pink"
+enum = "PL_SS_MedPink"
+rgb = [255, 85, 123]
+
+[[color]]
+index = 20
+name = "Salmon Pink"
+enum = "PL_SS_SalmonPink"
+rgb = [255, 117, 107]
+
+[[color]]
+index = 21
+name = "Light Salmon"
+enum = "PL_SS_LightSalmon"
+rgb = [255, 146, 107]
+
+[[color]]
+index = 22
+name = "Dark Orange"
+enum = "PL_SS_DarkOrange"
+rgb = [255, 142, 0]
+
+[[color]]
+index = 23
+name = "Orange"
+enum = "PL_SS_Orange"
+rgb = [255, 162, 0]
+
+[[color]]
+index = 24
+name = "Bright Orange"
+enum = "PL_SS_BrightOrange"
+rgb = [255, 166, 0]
+
+[[color]]
+index = 25
+name = "Amber"
+enum = "PL_SS_Amber"
+rgb = [255, 207, 0]
+
+[[color]]
+index = 26
+name = "Gold"
+enum = "PL_SS_Gold"
+rgb = [255, 215, 0]
+
+[[color]]
+index = 27
+name = "Warm Yellow"
+enum = "PL_SS_WarmYellow"
+rgb = [255, 235, 82]
+
+[[color]]
+index = 28
+name = "Light Yellow"
+enum = "PL_SS_LightYellow"
+rgb = [255, 243, 82]
+
+[[color]]
+index = 29
+name = "Pale Yellow"
+enum = "PL_SS_PaleYellow"
+rgb = [255, 251, 82]
+
+[[color]]
+index = 30
+name = "Off White"
+enum = "PL_SS_OffWhite"
+rgb = [255, 255, 123]
+
+[[color]]
+index = 31
+name = "White"
+enum = "PL_SS_White"
+rgb = [255, 255, 255]
+

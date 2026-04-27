@@ -7,9 +7,7 @@
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
-
-#define MODULE_DEBUG_ENABLED
-#include "WolfEngine/Utilities/WE_Debug.h"
+#include "WolfEngine/Utilities/WE_Debug.hpp"
 
 static const char *TAG = "ST7735";
 
@@ -41,7 +39,7 @@ public:
     }
 
     void initialize() override {
-        if (m_initialized) { DebugLog(TAG, "Display already initialized"); return; }
+        if (m_initialized) { WE_LOGI(TAG, "Display already initialized"); return; }
 
         esp_err_t ret;
         gpio_config_t io_conf                = {};
@@ -60,7 +58,7 @@ public:
         io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
         io_conf.intr_type    = GPIO_INTR_DISABLE;
         ret = gpio_config(&io_conf);
-        if (ret != ESP_OK) { DebugErr(TAG, "GPIO config failed: %s", esp_err_to_name(ret)); goto err_gpio; }
+        if (ret != ESP_OK) { WE_LOGE(TAG, "GPIO config failed: %s", esp_err_to_name(ret)); goto err_gpio; }
 
         // --- SPI bus ---
         bus_cfg.mosi_io_num     = Settings.hardware.spi.mosi;
@@ -70,7 +68,7 @@ public:
         bus_cfg.quadhd_io_num   = -1;
         bus_cfg.max_transfer_sz = screenWidth * screenHeight * (ST7735_BITS_PER_PIXEL / 8);
         ret = spi_bus_initialize(SPI2_HOST, &bus_cfg, SPI_DMA_CH_AUTO);
-        if (ret != ESP_OK) { DebugErr(TAG, "SPI bus init failed: %s", esp_err_to_name(ret)); goto err_spi_bus; }
+        if (ret != ESP_OK) { WE_LOGE(TAG, "SPI bus init failed: %s", esp_err_to_name(ret)); goto err_spi_bus; }
 
         // --- LCD panel IO ---
         io_cfg.dc_gpio_num         = Settings.hardware.display.dc;
@@ -83,21 +81,21 @@ public:
         io_cfg.on_color_trans_done = flushDoneCallback;
         io_cfg.user_ctx            = nullptr;
         ret = esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)SPI2_HOST, &io_cfg, &m_io);
-        if (ret != ESP_OK) { DebugErr(TAG, "Panel IO init failed: %s", esp_err_to_name(ret)); goto err_panel_io; }
+        if (ret != ESP_OK) { WE_LOGE(TAG, "Panel IO init failed: %s", esp_err_to_name(ret)); goto err_panel_io; }
 
         // --- ST7735 panel ---
         panel_cfg.reset_gpio_num = Settings.hardware.display.rst;
         panel_cfg.rgb_endian     = LCD_RGB_ENDIAN_RGB;
         panel_cfg.bits_per_pixel = ST7735_BITS_PER_PIXEL;
         ret = esp_lcd_new_panel_st7735(m_io, &panel_cfg, &m_panel);
-        if (ret != ESP_OK) { DebugErr(TAG, "Panel create failed: %s", esp_err_to_name(ret)); goto err_panel; }
+        if (ret != ESP_OK) { WE_LOGE(TAG, "Panel create failed: %s", esp_err_to_name(ret)); goto err_panel; }
 
         // --- Panel bring-up ---
         ret = esp_lcd_panel_reset(m_panel);
-        if (ret != ESP_OK) { DebugErr(TAG, "Panel reset failed: %s", esp_err_to_name(ret)); goto err_panel; }
+        if (ret != ESP_OK) { WE_LOGE(TAG, "Panel reset failed: %s", esp_err_to_name(ret)); goto err_panel; }
 
         ret = esp_lcd_panel_init(m_panel);
-        if (ret != ESP_OK) { DebugErr(TAG, "Panel init failed: %s", esp_err_to_name(ret)); goto err_panel; }
+        if (ret != ESP_OK) { WE_LOGE(TAG, "Panel init failed: %s", esp_err_to_name(ret)); goto err_panel; }
 
         esp_lcd_panel_invert_color(m_panel, false);
         esp_lcd_panel_mirror(m_panel, true, true);
@@ -105,7 +103,7 @@ public:
         esp_lcd_panel_disp_on_off(m_panel, true);
 
         m_initialized = true;
-        DebugLog(TAG, "ST7735 initialized successfully");
+        WE_LOGI(TAG, "ST7735 initialized successfully");
         return;
 
         // --- Cleanup on failure ---
@@ -120,22 +118,22 @@ public:
     }
 
     void flush(const uint16_t* framebuffer, int x1, int y1, int x2, int y2) override {
-        if (!m_initialized) { DebugErr(TAG, "Flush called before initialization"); return; }
-        if (!framebuffer)   { DebugErr(TAG, "Framebuffer is NULL"); return; }
+        if (!m_initialized) { WE_LOGE(TAG, "Flush called before initialization"); return; }
+        if (!framebuffer)   { WE_LOGE(TAG, "Framebuffer is NULL"); return; }
 
         xSemaphoreTake(s_flushSem, portMAX_DELAY);
         uint16_t* buf = const_cast<uint16_t*>(framebuffer) + y1 * screenWidth + x1;
         esp_err_t ret = esp_lcd_panel_draw_bitmap(m_panel, x1, y1, x2, y2, buf);
-        if (ret != ESP_OK) { DebugErr(TAG, "draw_bitmap failed: %s", esp_err_to_name(ret)); }
+        if (ret != ESP_OK) { WE_LOGE(TAG, "draw_bitmap failed: %s", esp_err_to_name(ret)); }
     }
 
     void sleep(bool enable) override {
-        if (!m_initialized) { DebugErr(TAG, "Sleep called before initialization"); return; }
+        if (!m_initialized) { WE_LOGE(TAG, "Sleep called before initialization"); return; }
 
         esp_err_t ret = esp_lcd_panel_disp_on_off(m_panel, !enable);
-        if (ret != ESP_OK) { DebugErr(TAG, "disp_on_off failed: %s", esp_err_to_name(ret)); return; }
+        if (ret != ESP_OK) { WE_LOGE(TAG, "disp_on_off failed: %s", esp_err_to_name(ret)); return; }
 
-        DebugLog(TAG, "Display sleep %s", enable ? "enabled" : "disabled");
+        WE_LOGI(TAG, "Display sleep %s", enable ? "enabled" : "disabled");
     }
 
     ~ST7735Driver() {

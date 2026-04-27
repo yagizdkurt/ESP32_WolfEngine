@@ -1,0 +1,198 @@
+﻿[meta]
+name = "PALETTE_GAMEBOY"
+enum = "Gameboy"
+header = "WE_Palette_Gameboy.hpp"
+description = "Inspired by the original DMG Game Boy LCD green palette. Extends the classic 4-shade look into 31 tones while keeping the iconic green-tinted monochrome aesthetic."
+
+[[color]]
+index = 0
+name = "Transparent"
+enum = "PL_GB_Transparent"
+rgb = [0, 0, 0]
+
+[[color]]
+index = 1
+name = "Darkest Green"
+enum = "PL_GB_DarkestGreen"
+rgb = [0, 28, 0]
+
+[[color]]
+index = 2
+name = "Dark Green 2"
+enum = "PL_GB_DarkGreen2"
+rgb = [0, 36, 0]
+
+[[color]]
+index = 3
+name = "Dark Green 3"
+enum = "PL_GB_DarkGreen3"
+rgb = [0, 44, 0]
+
+[[color]]
+index = 4
+name = "Dark Green 4"
+enum = "PL_GB_DarkGreen4"
+rgb = [0, 52, 0]
+
+[[color]]
+index = 5
+name = "Dark Green 5"
+enum = "PL_GB_DarkGreen5"
+rgb = [0, 60, 0]
+
+[[color]]
+index = 6
+name = "Dark Green 6"
+enum = "PL_GB_DarkGreen6"
+rgb = [0, 69, 0]
+
+[[color]]
+index = 7
+name = "Dark Green 7"
+enum = "PL_GB_DarkGreen7"
+rgb = [0, 77, 0]
+
+[[color]]
+index = 8
+name = "Dark Green 8"
+enum = "PL_GB_DarkGreen8"
+rgb = [0, 85, 0]
+
+[[color]]
+index = 9
+name = "Dark Green 9"
+enum = "PL_GB_DarkGreen9"
+rgb = [0, 93, 0]
+
+[[color]]
+index = 10
+name = "Dark Green 10"
+enum = "PL_GB_DarkGreen10"
+rgb = [0, 101, 0]
+
+[[color]]
+index = 11
+name = "Mid Dark"
+enum = "PL_GB_MidDark"
+rgb = [0, 109, 0]
+
+[[color]]
+index = 12
+name = "Mid Dark 2"
+enum = "PL_GB_MidDark2"
+rgb = [0, 117, 0]
+
+[[color]]
+index = 13
+name = "Mid Dark 3"
+enum = "PL_GB_MidDark3"
+rgb = [0, 125, 0]
+
+[[color]]
+index = 14
+name = "Mid Tone 1"
+enum = "PL_GB_MidTone1"
+rgb = [8, 125, 0]
+
+[[color]]
+index = 15
+name = "Mid Tone"
+enum = "PL_GB_MidTone"
+rgb = [16, 125, 0]
+
+[[color]]
+index = 16
+name = "Mid Tone 2"
+enum = "PL_GB_MidTone2"
+rgb = [24, 125, 0]
+
+[[color]]
+index = 17
+name = "Mid Tone 3"
+enum = "PL_GB_MidTone3"
+rgb = [33, 125, 0]
+
+[[color]]
+index = 18
+name = "Mid Tone 4"
+enum = "PL_GB_MidTone4"
+rgb = [41, 125, 0]
+
+[[color]]
+index = 19
+name = "Mid Tone 5"
+enum = "PL_GB_MidTone5"
+rgb = [49, 125, 0]
+
+[[color]]
+index = 20
+name = "Mid Tone 6"
+enum = "PL_GB_MidTone6"
+rgb = [57, 125, 0]
+
+[[color]]
+index = 21
+name = "Mid Light 1"
+enum = "PL_GB_MidLight1"
+rgb = [74, 125, 0]
+
+[[color]]
+index = 22
+name = "Mid Light 2"
+enum = "PL_GB_MidLight2"
+rgb = [90, 125, 0]
+
+[[color]]
+index = 23
+name = "Light"
+enum = "PL_GB_Light"
+rgb = [107, 125, 0]
+
+[[color]]
+index = 24
+name = "Light 2"
+enum = "PL_GB_Light2"
+rgb = [123, 125, 0]
+
+[[color]]
+index = 25
+name = "Light Green 1"
+enum = "PL_GB_LightGreen1"
+rgb = [140, 125, 8]
+
+[[color]]
+index = 26
+name = "Light Green 2"
+enum = "PL_GB_LightGreen2"
+rgb = [156, 125, 16]
+
+[[color]]
+index = 27
+name = "Light Green 3"
+enum = "PL_GB_LightGreen3"
+rgb = [173, 125, 24]
+
+[[color]]
+index = 28
+name = "Very Light"
+enum = "PL_GB_VeryLight"
+rgb = [189, 125, 33]
+
+[[color]]
+index = 29
+name = "Very Light 2"
+enum = "PL_GB_VeryLight2"
+rgb = [206, 125, 41]
+
+[[color]]
+index = 30
+name = "Very Light 3"
+enum = "PL_GB_VeryLight3"
+rgb = [222, 125, 49]
+
+[[color]]
+index = 31
+name = "Lightest"
+enum = "PL_GB_Lightest"
+rgb = [239, 125, 57]
+

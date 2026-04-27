@@ -1,0 +1,12 @@
+# Asset configuration for WolfEngine image-to-asset converter.
+#
+# One optional entry per image file (without .png extension).
+# If an entry is absent, the converter auto-quantizes to 31 colors.
+#
+# palette = "NAME"  →  nearest-color map to that named palette.
+#                       NAME must match meta.name in a tools/palettes/*.toml file.
+#
+# Examples:
+# [player]
+# palette = "PALETTE_WARM"
+#
