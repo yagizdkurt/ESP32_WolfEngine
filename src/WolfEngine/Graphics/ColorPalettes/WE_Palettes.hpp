@@ -1,4 +1,5 @@
 #pragma once
+#include "esp_log.h"
 
 // =============================================================
 //  WolfEngine Color Palette System — Master Include & Documentation

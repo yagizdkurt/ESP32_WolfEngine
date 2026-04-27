@@ -2,10 +2,15 @@
 #include "stdint.h"
 #include "stdbool.h"
 #include "esp_log.h"
+#include "WolfEngine/Settings/WE_Settings.hpp"
 #include <type_traits>
 #include "WolfEngine/Utilities/WE_Vector2d.hpp"
 #include "WolfEngine/ComponentSystem/Components/WE_Comp_Transform.hpp"
 #include "WolfEngine/ComponentSystem/Components/WE_BaseComp.hpp"
+
+#if defined(WE_MODULE_COLLISION)
+class Collider;
+#endif
 
 // =============================================================
 //                  GAMEOBJECT SYSTEM
@@ -228,7 +233,6 @@ public:
     //  and triggers. These are called by the engine when the
     //  appropriate physics events occur. Do not call these manually.
     // ---------------------------------------------------------
-    class Collider;
     virtual void OnCollisionEnter (Collider* other)  { }
     virtual void OnCollisionStay  (Collider* other)  { }
     virtual void OnCollisionExit  (Collider* other)  { }
@@ -246,9 +250,6 @@ public:
     // ---------------------------------------------------------
     void registerComponent(Component* comp);
 
-    // ---------------------------------------------------------
-    // private members and functions below — not accessible from outside and not intended for users.
-    // ----------------------------------------------------------
 protected:
     GameObject();
     virtual ~GameObject();

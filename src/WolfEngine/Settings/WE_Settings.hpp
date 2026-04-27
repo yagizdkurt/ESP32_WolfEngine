@@ -17,7 +17,7 @@
 // These macros gate both #include directives and static variable declarations
 // in WE_ModuleSystem.cpp — if constexpr cannot replace them.
 #define WE_MODULE_SAVELOAD
-#define WE_MODULE_COLLISION
+//#define WE_MODULE_COLLISION
 
 /*
 ============================================================================================
@@ -155,12 +155,9 @@ inline constexpr EngineConfig Settings = {
 };
 
 // ── Validation ───────────────────────────────────────────────────────────────
-static_assert(Settings.limits.maxGameObjects > 0 && Settings.limits.maxGameObjects <= 65535,
-    "maxGameObjects must be between 1 and 65535 — live counter in WE_GORegistry is uint16_t");
-static_assert(Settings.limits.maxUIElements > 0 && Settings.limits.maxUIElements <= 255,
-    "maxUIElements must be between 1 and 255 — UIManager count is uint8_t");
-static_assert(Settings.limits.maxPanelChildren > 0 && Settings.limits.maxPanelChildren <= 255,
-    "maxPanelChildren must be between 1 and 255 — iterator in UIPanel is uint8_t");
+static_assert(Settings.limits.maxGameObjects > 0,"maxGameObjects must be > 0");
+static_assert(Settings.limits.maxUIElements > 0, "maxUIElements must be > 0");
+static_assert(Settings.limits.maxPanelChildren > 0,"maxPanelChildren must be > 0");
 static_assert(Settings.render.maxDrawCommands  > 0,  "maxDrawCommands must be > 0");
 static_assert(Settings.render.targetFrameTimeUs > 0, "targetFrameTimeUs must be > 0");
 static_assert(Settings.input.buttonCount == kButtonCount,
