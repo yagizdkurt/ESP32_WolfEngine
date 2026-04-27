@@ -1,5 +1,4 @@
-#include <esp_log.h>
-#include <string>
+#include "WolfEngine/Utilities/WE_Debug.hpp"
 #include "WE_I2C.hpp"
 // ─────────────────────────────────────────────────────────────
 // ── Lifecycle ──────────────────────────────────────────────
@@ -84,7 +83,7 @@
     // ── Scan ───────────────────────────────────────────────────
 
     void I2CManager::scan() {
-        ESP_LOGI("I2C", "Scanning bus...");
+        WE_LOGI("I2C", "Scanning bus...");
         for (uint8_t addr = 1; addr < 127; addr++) {
             i2c_cmd_handle_t cmd = i2c_cmd_link_create();
             i2c_master_start(cmd);
@@ -93,6 +92,6 @@
             esp_err_t err = i2c_master_cmd_begin(PORT, cmd, TIMEOUT);
             i2c_cmd_link_delete(cmd);
             if (err == ESP_OK)
-                ESP_LOGI("I2C", "  Found device at 0x%02X", addr);
+                WE_LOGI("I2C", "  Found device at 0x%02X", addr);
         }
     }

@@ -1,8 +1,8 @@
 #include "WolfEngine/InputSystem/WE_InputManager.hpp"
 #include "WolfEngine/InputSystem/WE_IInputProvider.hpp"
+#include "WolfEngine/Utilities/WE_Debug.hpp"
 #include "esp_timer.h"
 #include "driver/gpio.h"
-#include <cassert>
 
 void InputManager::setInputProvider(IInputProvider* provider) { m_inputProvider = provider; }
 void InputManager::setAlwaysEnableController0(bool value) { m_alwaysEnableController0 = value; }
@@ -11,7 +11,7 @@ void InputManager::setAlwaysEnableController0(bool value) { m_alwaysEnableContro
 // A future provider (e.g. replay system) may not require controller 0 to bypass
 // the enabled check. The two concerns must remain independently controllable.
 Controller* InputManager::getController(int index) {
-    assert(index >= 0 && index < MAX_CONTROLLERS && "getController: index out of range");
+    WE_ASSERT(index >= 0 && index < MAX_CONTROLLERS, "getController: index out of range");
     if (m_alwaysEnableController0 && index == 0) return &m_controllers[0];
     if (!Settings.input.controllers[index].enabled) return nullptr;
     return &m_controllers[index];

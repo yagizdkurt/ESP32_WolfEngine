@@ -1,5 +1,5 @@
 #include "WolfEngine/Utilities/WE_Timer.hpp"
-#include <cassert>
+#include "WolfEngine/Utilities/WE_Debug.hpp"
 
 void Timer::start() {
     m_active    = true;
@@ -15,17 +15,13 @@ void Timer::reset() {
 }
 
 bool Timer::elapsed(int64_t durationMs) const {
-#ifndef NDEBUG
-    assert(durationMs >= 0);
-#endif
+    WE_ASSERT(durationMs >= 0, "Timer duration must be >= 0");
     if (!m_active) return false;
     return (WETime::now() - m_timestamp) >= durationMs;
 }
 
 bool Timer::check(int64_t durationMs) {
-#ifndef NDEBUG
-    assert(durationMs >= 0);
-#endif
+    WE_ASSERT(durationMs >= 0, "Timer duration must be >= 0");
     if (!m_active) return false;
     int64_t t = WETime::now();
     if ((t - m_timestamp) >= durationMs) {
@@ -36,9 +32,7 @@ bool Timer::check(int64_t durationMs) {
 }
 
 bool Timer::timeout(int64_t durationMs) const {
-#ifndef NDEBUG
-    assert(durationMs >= 0);
-#endif
+    WE_ASSERT(durationMs >= 0, "Timer duration must be >= 0");
     if (!m_active) return false;
     return (WETime::now() - m_timestamp) < durationMs;
 }

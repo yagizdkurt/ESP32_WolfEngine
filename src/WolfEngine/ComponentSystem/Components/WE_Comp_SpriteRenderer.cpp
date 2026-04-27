@@ -2,9 +2,8 @@
 #include "WolfEngine/Utils/WE_MathUtils.h"
 #include "WolfEngine/GameObjectSystem/WE_GameObject.hpp"
 #include "WolfEngine/Graphics/RenderSystem/WE_Camera.hpp"
+#include "WolfEngine/Utilities/WE_Debug.hpp"
 #include "WolfEngine/WolfEngine.hpp"
-#include "esp_log.h"
-#include <cassert>
 
 SpriteRenderer::SpriteRenderer(GameObject* owner, const Sprite* sprite, RenderLayer layer)
     : m_owner   (owner)
@@ -62,10 +61,10 @@ void SpriteRenderer::onDraw() {
     const uint16_t* selectedPalette = m_usePaletteOverride ? m_paletteOverride : m_sprite->palette;
 
     if (pixels == nullptr || selectedPalette == nullptr) { // Validitiy check: sprite data must not be null
-        ESP_LOGE("SpriteRenderer: ","Invalid sprite pointers (sprite=%p pixels=%p palette=%p override=%d)",
-        static_cast<const void*>(m_sprite), static_cast<const void*>(pixels),
-        static_cast<const void*>(selectedPalette), m_usePaletteOverride ? 1 : 0);
-        assert(false && "SpriteRenderer: pixels/palette pointer must not be null");
+        WE_LOGE("SpriteRenderer", "Invalid sprite pointers (sprite=%p pixels=%p palette=%p override=%d)",
+                static_cast<const void*>(m_sprite), static_cast<const void*>(pixels),
+                static_cast<const void*>(selectedPalette), m_usePaletteOverride ? 1 : 0);
+        WE_ASSERT(false, "SpriteRenderer: pixels/palette pointer must not be null");
         return;
     }
 
