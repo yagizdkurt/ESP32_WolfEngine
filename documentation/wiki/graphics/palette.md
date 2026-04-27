@@ -49,17 +49,23 @@ Include all built-in palettes with a single line:
 Each built-in palette ships with a plain enum so you can reference colors by name instead of by index number. The prefix prevents name clashes between palettes since plain enums live in the global namespace.
 
 ```cpp
-mySprite.setPalette(PALETTE_WARM);
+constexpr uint8_t playerPixels[4][4] = {
+    {0, 0, 0, 0},
+    {0, 1, 1, 0},
+    {0, 1, 1, 0},
+    {0, 0, 0, 0},
+};
+constexpr Sprite PLAYER = Sprite::Create(playerPixels, PALETTE_WARM);
 
 // Instead of this:
 // pixel index 8 = red ❌ 
 
 // You can document sprite data like this: ✅
-constexpr uint8_t PlayerSprite[] = {
-    0,              0,              0,              0,
-    0,  PL_WM_PureRed, PL_WM_PureRed,              0,
-    0,  PL_WM_PureRed, PL_WM_PureRed,              0,
-    0,              0,              0,              0,
+constexpr uint8_t PlayerSprite[4][4] = {
+    {0,              0,              0,              0},
+    {0,  PL_WM_PureRed, PL_WM_PureRed,              0},
+    {0,  PL_WM_PureRed, PL_WM_PureRed,              0},
+    {0,              0,              0,              0},
 };
 ```
 
@@ -86,14 +92,18 @@ PALETTE_SUNSET[PL_SS_WarmYellow]
 
 ## Palette Swapping
 
-Since sprites hold a pointer to their palette rather than a copy, swapping at runtime is just a pointer reassignment — no copying, no overhead.
+`SpriteRenderer` does not expose `setPalette()`. For runtime palette changes, define sprite variants using the same pixel array and switch with `setSprite()`.
 
 ```cpp
-// Normal state
-mySprite.setPalette(PALETTE_WARM);
+constexpr uint8_t enemyPixels[8][8] = { /* ... */ };
+constexpr Sprite ENEMY_NORMAL = Sprite::Create(enemyPixels, PALETTE_WARM);
+constexpr Sprite ENEMY_HIT    = Sprite::Create(enemyPixels, PALETTE_SUNSET);
 
-// Hit flash — swap to red-heavy palette for one frame
-mySprite.setPalette(PALETTE_SUNSET);
+// Normal state
+spriteRenderer.setSprite(&ENEMY_NORMAL);
+
+// Hit flash
+spriteRenderer.setSprite(&ENEMY_HIT);
 ```
 
 Common uses:
@@ -143,7 +153,13 @@ constexpr uint16_t MY_PALETTE[32] = {
 Then include it and assign to a sprite:
 ```cpp
 #include "MyPalette.hpp"
-mySprite.setPalette(MY_PALETTE);
+constexpr uint8_t myPixels[4][4] = {
+    {0, 1, 1, 0},
+    {1, 2, 2, 1},
+    {1, 2, 2, 1},
+    {0, 1, 1, 0},
+};
+constexpr Sprite MY_SPRITE = Sprite::Create(myPixels, MY_PALETTE);
 ```
 
 Optionally add an enum for named access:
@@ -165,12 +181,12 @@ Sprite pixel arrays are row-major, left to right, top to bottom. One byte per pi
 
 ```cpp
 // 0 = transparent, 1 = outline, 2 = fill
-constexpr uint8_t MySprite[] = { // 4x4
-    0, 1, 1, 0,
-    1, 2, 2, 1,
-    1, 2, 2, 1,
-    0, 1, 1, 0,
+constexpr uint8_t MySprite[4][4] = {
+    {0, 1, 1, 0},
+    {1, 2, 2, 1},
+    {1, 2, 2, 1},
+    {0, 1, 1, 0},
 };
 ```
 
-The sprite size passed to the `SpriteRenderer` constructor is the width (and height — sprites are always square). See [Sprite Renderer](../gameobjects-and-components/sprite-renderer.md) for the full sprite API.
+`Sprite` stores dimensions and anchor point directly (`width`, `height`, `anchorX`, `anchorY`). `SpriteRenderer` receives only a sprite pointer and render layer. See [Sprite Renderer](../gameobjects-and-components/sprite-renderer.md) for the full sprite API.

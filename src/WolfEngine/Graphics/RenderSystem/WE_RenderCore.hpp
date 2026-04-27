@@ -59,10 +59,9 @@ private:
     void executeAndFlush();
     void sortCommands();
     void executeCommands();
-    void drawSpriteInternal(int16_t x, int16_t y,
-                            const uint8_t*  pixels,
-                            const uint16_t* palette,
-                            int size, Rotation rotation);
+    void drawSpriteInternal(int16_t x, int16_t y, const uint8_t*  pixels,
+        const uint16_t* palette, int width, int height, Rotation rotation);
+        
     void clearCommands();
     void drawFillRectInternal(int16_t x, int16_t y, uint8_t w, uint8_t h, uint16_t color);
     void drawLineInternal(int16_t x1, int16_t y1, int16_t x2, int16_t y2, uint16_t color);

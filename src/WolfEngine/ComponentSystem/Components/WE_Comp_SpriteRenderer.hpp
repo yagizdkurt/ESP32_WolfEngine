@@ -9,20 +9,20 @@
 //  WE_Comp_SpriteRenderer.hpp
 //  The SpriteRenderer component submits a DrawCommand to the
 //  renderer each frame during the component-tick phase. It owns
-//  the sprite asset pointer, palette, rotation, and visibility
+//  the sprite asset pointer, rotation, and visibility
 //  state for the attached GameObject.
 //
 //  USAGE:
-//      // 1. Define pixel data in flash
-//      constexpr uint8_t playerPixels[7 * 7] = { ... };
+//      // 1. Define pixel data in flash — 2D array [rows][cols]
+//      constexpr uint8_t playerPixels[7][7] = { ... };
 //
-//      // 2. Create Sprite asset — size is automatically deduced and validated
-//      constexpr Sprite SPRITE_PLAYER = Sprite::Create(playerPixels);
+//      // 2. Create Sprite asset — palette is bundled at creation
+//      constexpr Sprite SPRITE_PLAYER = Sprite::Create(playerPixels, PALETTE_WARM);
 //
 //      // 3. Attach SpriteRenderer to your GameObject
 //      class Player : public GameObject {
 //      public:
-//          SpriteRenderer spriteRenderer = SpriteRenderer(this, &SPRITE_PLAYER, PALETTE_WARM, RenderLayer::Player);
+//          SpriteRenderer spriteRenderer = SpriteRenderer(this, &SPRITE_PLAYER, RenderLayer::Player);
 //      };
 // =============================================================
 
@@ -32,12 +32,10 @@ public:
     // Construct and enable ticking to submit DrawCommands each frame.
     //
     // owner   — pointer to the owning GameObject (pass 'this')
-    // sprite  — pointer to a constexpr Sprite asset in flash
-    // palette — constexpr uint16_t[32] palette array in flash
+    // sprite  — pointer to a constexpr Sprite asset in flash (palette bundled in sprite)
     // layer   — render layer, defaults to RenderLayer::Default
     SpriteRenderer(class GameObject*  owner,
                    const Sprite*      sprite,
-                   const uint16_t*    palette,
                    RenderLayer        layer = RenderLayer::Default);
 
     ~SpriteRenderer() = default;
@@ -48,9 +46,6 @@ public:
 
     // Swap the active Sprite asset — used by Animator for frame changes.
     void setSprite(const Sprite* sprite)     { m_sprite   = sprite;    }
-
-    // Swap the active palette.
-    void setPalette(const uint16_t* palette) { m_palette  = palette;   }
 
     // -------------------------------------------------------------
     //  Change rotation
@@ -85,7 +80,6 @@ private:
 
     class GameObject*  m_owner;
     const Sprite*      m_sprite;
-    const uint16_t*    m_palette;
     uint8_t            m_layer;
     Rotation           m_rotation = Rotation::R0;
     bool               m_useSortKeyOverride = false;

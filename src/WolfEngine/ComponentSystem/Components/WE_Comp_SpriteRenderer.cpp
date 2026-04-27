@@ -3,10 +3,9 @@
 #include "WolfEngine/Graphics/RenderSystem/WE_Camera.hpp"
 #include "WolfEngine/WolfEngine.hpp"
 
-SpriteRenderer::SpriteRenderer(GameObject* owner, const Sprite* sprite, const uint16_t* palette, RenderLayer layer)
+SpriteRenderer::SpriteRenderer(GameObject* owner, const Sprite* sprite, RenderLayer layer)
     : m_owner   (owner)
     , m_sprite  (sprite)
-    , m_palette (palette)
     , m_layer   (static_cast<uint8_t>(layer))
 {
     type        = COMP_SPRITE;
@@ -18,31 +17,61 @@ void SpriteRenderer::tick() { if constexpr (Settings.render.spriteSystemEnabled)
 void SpriteRenderer::onDraw() {
     if (!m_visible || !m_sprite) return;
 
-    // World → screen, centered on the sprite's world position
+    const int W  = m_sprite->width;
+    const int H  = m_sprite->height;
+    const int AX = m_sprite->anchorX;
+    const int AY = m_sprite->anchorY;
+
+    // World → screen position of the anchor point
     Vec2 screen = MainCamera().worldToScreen(m_owner->transform.position);
-    int16_t drawX = static_cast<int16_t>(screen.x) - static_cast<int16_t>(m_sprite->size / 2);
-    int16_t drawY = static_cast<int16_t>(screen.y) - static_cast<int16_t>(m_sprite->size / 2);
+    const int16_t screenX = static_cast<int16_t>(screen.x);
+    const int16_t screenY = static_cast<int16_t>(screen.y);
+
+    // Compute top-left corner of the output rect from the anchor, per rotation
+    int16_t topX, topY;
+    switch (m_rotation) {
+        case Rotation::R0:
+            topX = screenX - AX;
+            topY = screenY - AY;
+            break;
+        case Rotation::R90:
+            topX = screenX - AY;
+            topY = screenY - (W - 1 - AX);
+            break;
+        case Rotation::R180:
+            topX = screenX - (W - 1 - AX);
+            topY = screenY - (H - 1 - AY);
+            break;
+        default: // R270
+            topX = screenX - (H - 1 - AY);
+            topY = screenY - AX;
+            break;
+    }
+
+    // Output dimensions swap at 90°/270°
+    const int outW = (m_rotation == Rotation::R90 || m_rotation == Rotation::R270) ? H : W;
+    const int outH = (m_rotation == Rotation::R90 || m_rotation == Rotation::R270) ? W : H;
 
     // Coarse cull — skip if entirely outside the game region
-    const int sz = m_sprite->size;
-    if (drawX + sz <= Settings.render.gameRegion.x1 ||
-        drawX       >= Settings.render.gameRegion.x2 ||
-        drawY + sz <= Settings.render.gameRegion.y1 ||
-        drawY       >= Settings.render.gameRegion.y2)
+    if (topX + outW <= Settings.render.gameRegion.x1 ||
+        topX        >= Settings.render.gameRegion.x2 ||
+        topY + outH <= Settings.render.gameRegion.y1 ||
+        topY        >= Settings.render.gameRegion.y2)
         return;
 
     DrawCommand cmd;
-    cmd.type             = DrawCommandType::Sprite;
-    cmd.x                = drawX;
-    cmd.y                = drawY;
-    cmd.flags            = cmdSetRotation(0, m_rotation);
-    uint8_t sortByte     = m_useSortKeyOverride
-                             ? static_cast<uint8_t>(m_sortKeyOverride)
-                             : static_cast<uint8_t>(drawY);
-    cmd.sortKey          = cmdMakeSortKey(static_cast<RenderLayer>(m_layer), sortByte);
-    cmd.sprite.pixels    = m_sprite->pixels;
-    cmd.sprite.palette   = m_palette;
-    cmd.sprite.size      = static_cast<uint8_t>(sz);
+    cmd.type          = DrawCommandType::Sprite;
+    cmd.x             = topX;
+    cmd.y             = topY;
+    cmd.flags         = cmdSetRotation(0, m_rotation);
+    uint8_t sortByte  = m_useSortKeyOverride
+                          ? WE_Math::clampToByte(m_sortKeyOverride)
+                          : WE_Math::clampToByte(topY);
+    cmd.sortKey       = cmdMakeSortKey(static_cast<RenderLayer>(m_layer), sortByte);
+    cmd.sprite.pixels  = m_sprite->pixels;
+    cmd.sprite.palette = m_sprite->palette;
+    cmd.sprite.width   = static_cast<uint8_t>(W);
+    cmd.sprite.height  = static_cast<uint8_t>(H);
 
     RenderSys().submitDrawCommand(cmd);
 }

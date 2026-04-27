@@ -9,23 +9,23 @@ The `Animator` component drives a `SpriteRenderer` by cycling through an `Animat
 Define your pixel data, create a `Sprite` array, wrap it in an `Animation`, then attach an `Animator` to your `SpriteRenderer`:
 
 ```cpp
-constexpr uint8_t walkPixels0[7 * 7] = { ... };
-constexpr uint8_t walkPixels1[7 * 7] = { ... };
-constexpr uint8_t walkPixels2[7 * 7] = { ... };
-constexpr uint8_t walkPixels3[7 * 7] = { ... };
+constexpr uint8_t walkPixels0[7][7] = { ... };
+constexpr uint8_t walkPixels1[7][7] = { ... };
+constexpr uint8_t walkPixels2[7][7] = { ... };
+constexpr uint8_t walkPixels3[7][7] = { ... };
 
 constexpr Sprite WALK_FRAMES[] = {
-    Sprite::Create(walkPixels0),
-    Sprite::Create(walkPixels1),
-    Sprite::Create(walkPixels2),
-    Sprite::Create(walkPixels3),
+    Sprite::Create(walkPixels0, PALETTE_WARM),
+    Sprite::Create(walkPixels1, PALETTE_WARM),
+    Sprite::Create(walkPixels2, PALETTE_WARM),
+    Sprite::Create(walkPixels3, PALETTE_WARM),
 };
 
 constexpr Animation WALK = Animation::Create(WALK_FRAMES);
 
 class Player : public GameObject {
 public:
-    SpriteRenderer spriteRenderer = SpriteRenderer(this, &WALK_FRAMES[0], PALETTE_WARM, RenderLayer::Player);
+    SpriteRenderer spriteRenderer = SpriteRenderer(this, &WALK_FRAMES[0], RenderLayer::Player);
     Animator       animator       = Animator(&spriteRenderer, WALK, 8);
 };
 ```

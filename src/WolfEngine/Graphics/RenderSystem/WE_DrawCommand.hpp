@@ -47,8 +47,9 @@ struct DrawCommand {
         struct {
             const uint8_t*  pixels;
             const uint16_t* palette;
-            uint8_t  size;
-            uint8_t  _free[3];  // 3 explicit free bytes — no silent padding
+            uint8_t  width;
+            uint8_t  height;
+            uint8_t  _free[2];  // 2 explicit free bytes — no silent padding
         } sprite;                // 12 bytes
 
         struct {

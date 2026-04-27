@@ -8,13 +8,13 @@
 
 Create a `constexpr uint8_t` array in flash. This can live anywhere — inline in your class, in a dedicated sprites header, wherever makes sense for your project.
 
-**Valid sizes:** NxN odd numbers up to 65. Passing a non-square or unsupported size is a compile error.
+**Valid sizes:** rectangular `[H][W]` arrays with `W` and `H` each in the range `1..63`. Non-2D arrays or out-of-range dimensions are compile errors.
 
 ```cpp
-constexpr uint8_t playerPixels[3 * 3] = {
-    0, 1, 0,
-    1, 2, 1,
-    0, 1, 0
+constexpr uint8_t playerPixels[3][3] = {
+   {0, 1, 0},
+   {1, 2, 1},
+   {0, 1, 0}
 };
 ```
 
@@ -27,7 +27,7 @@ constexpr uint8_t playerPixels[3 * 3] = {
 `Sprite` is a plain data asset — not a component. Use `Sprite::Create()` to turn your pixel array into a `Sprite`.
 
 ```cpp
-constexpr Sprite SPRITE_PLAYER = Sprite::Create(playerPixels);
+constexpr Sprite SPRITE_PLAYER = Sprite::Create(playerPixels, PALETTE_WARM);
 ```
 
 ---
@@ -37,14 +37,13 @@ constexpr Sprite SPRITE_PLAYER = Sprite::Create(playerPixels);
 Declare a `SpriteRenderer` as a public member of your GameObject using the constructor below:
 
 ```
-SpriteRenderer(owner, sprite, palette, layer)
+SpriteRenderer(owner, sprite, layer)
 ```
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `owner`   | `GameObject*`      | The owning object — always pass `this` |
-| `sprite`  | `const Sprite*`    | Pointer to a `constexpr Sprite` asset in flash |
-| `palette` | `const uint16_t*`  | 32-entry RGB565 palette array in flash |
+| `sprite`  | `const Sprite*`    | Pointer to a `constexpr Sprite` asset in flash (pixels + palette + anchor) |
 | `layer`   | `RenderLayer`      | Render layer — defaults to `RenderLayer::Default` if omitted |
 
 ```cpp
@@ -53,7 +52,7 @@ SpriteRenderer(owner, sprite, palette, layer)
 
 class Player : public GameObject {
 public:
-    SpriteRenderer spriteRenderer = SpriteRenderer(this, &SPRITE_PLAYER, PALETTE_WARM, RenderLayer::Player);
+   SpriteRenderer spriteRenderer = SpriteRenderer(this, &SPRITE_PLAYER, RenderLayer::Player);
 };
 ```
 
@@ -77,38 +76,42 @@ Pixel arrays are row-major, left to right, top to bottom. Each byte is a palette
 
 ```cpp
 // 0 = transparent, 1 = outline, 2 = fill, 3 = highlight
-constexpr uint8_t coinPixels[9 * 9] = {
+constexpr uint8_t coinPixels[8][9] = {
     // 0 0 1 1 1 1 0 0 0
-       0,0,1,1,1,1,0,0,0,
+    {  0,0,1,1,1,1,0,0,0 },
     // 0 1 2 3 3 2 1 0 0
-       0,1,2,3,3,2,1,0,0,
+    {  0,1,2,3,3,2,1,0,0 },
     // 0 1 3 2 2 3 1 0 0
-       0,1,3,2,2,3,1,0,0,
+    {  0,1,3,2,2,3,1,0,0 },
     // 0 1 2 3 3 2 1 0 0
-       0,1,2,3,3,2,1,0,0,
+    {  0,1,2,3,3,2,1,0,0 },
     // 0 1 3 2 2 3 1 0 0
-       0,1,3,2,2,3,1,0,0,
+    {  0,1,3,2,2,3,1,0,0 },
     // 0 1 2 3 3 2 1 0 0
-       0,1,2,3,3,2,1,0,0,
+    {  0,1,2,3,3,2,1,0,0 },
     // 0 1 2 2 2 2 1 0 0
-       0,1,2,2,2,2,1,0,0,
+    {  0,1,2,2,2,2,1,0,0 },
     // 0 0 1 1 1 1 0 0 0
-       0,0,1,1,1,1,0,0,0,
+    {  0,0,1,1,1,1,0,0,0 },
 };
-constexpr Sprite SPRITE_COIN = Sprite::Create(coinPixels);
+constexpr Sprite SPRITE_COIN = Sprite::Create(coinPixels, PALETTE_WARM);
 ```
 
 Keeping a comment map above each row makes sprite data human readable and easy to edit.
 
 ---
 
-## Palette Swapping
+## Palette Variants
 
-Swap the active palette at runtime with `setPalette()`. Takes effect immediately on the next frame — no copying, just a pointer swap.
+`SpriteRenderer` no longer owns a separate palette pointer. To change appearance, create sprite variants that share the same pixels and use `setSprite()`.
 
 ```cpp
-spriteRenderer.setPalette(PALETTE_WARM);    // normal state
-spriteRenderer.setPalette(PALETTE_SUNSET);  // hit flash
+constexpr uint8_t enemyPixels[8][8] = { /* ... */ };
+constexpr Sprite ENEMY_NORMAL = Sprite::Create(enemyPixels, PALETTE_WARM);
+constexpr Sprite ENEMY_HIT    = Sprite::Create(enemyPixels, PALETTE_SUNSET);
+
+spriteRenderer.setSprite(&ENEMY_NORMAL);
+spriteRenderer.setSprite(&ENEMY_HIT);
 ```
 
 See [Settings](../engine-settings/settings.md) for related render settings and configuration context.
@@ -125,6 +128,8 @@ spriteRenderer.setRotation(Rotation::R90);   // 90° clockwise
 spriteRenderer.setRotation(Rotation::R180);  // 180°
 spriteRenderer.setRotation(Rotation::R270);  // 270° clockwise
 ```
+
+Anchors are stored in `Sprite` (`anchorX`, `anchorY`). By default they are centered (`W/2`, `H/2`) and remain pinned to the GameObject position across all rotations.
 
 ---
 
@@ -159,7 +164,7 @@ spriteRenderer.setSprite(&SPRITE_WALK_A);
 spriteRenderer.setSprite(&SPRITE_WALK_B);
 ```
 
-> **Note:** Never reassign a `SpriteRenderer` member with `= SpriteRenderer(...)` at runtime. Update sprite/palette/rotation/visibility on the existing component instance instead.
+> **Note:** Never reassign a `SpriteRenderer` member with `= SpriteRenderer(...)` at runtime. Update sprite/rotation/visibility on the existing component instance instead.
 
 ---
 

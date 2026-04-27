@@ -50,27 +50,31 @@ bool Renderer::submitDrawCommand(const DrawCommand& cmd) {
 //  and per-pixel bounds checking against the game region.
 // -------------------------------------------------------------
 void IRAM_ATTR Renderer::drawSpriteInternal(int16_t x, int16_t y,
-                                   const uint8_t*  pixels,
-                                   const uint16_t* palette,
-                                   int size, Rotation rotation) {
-    for (int py = 0; py < size; py++) {
-        for (int px = 0; px < size; px++) {
+    const uint8_t*  pixels, const uint16_t* palette, int width, int height, Rotation rotation)
+    {
+    // Output dimensions swap at 90°/270° — iterate over the output rect.
+    const int outW = (rotation == Rotation::R90 || rotation == Rotation::R270) ? height : width;
+    const int outH = (rotation == Rotation::R90 || rotation == Rotation::R270) ? width  : height;
 
-            // Apply rotation — remap (px, py) to source pixel index
+    for (int py = 0; py < outH; py++) {
+        for (int px = 0; px < outW; px++) {
+
+            // Apply rotation — remap output (px, py) to source pixel index.
+            // W = width (source columns), H = height (source rows).
             int srcIndex;
             switch (rotation) {
                 case Rotation::R0:
                 default:
-                    srcIndex = py * size + px;
+                    srcIndex = py * width + px;
                     break;
                 case Rotation::R90:
-                    srcIndex = (size - 1 - px) * size + py;
+                    srcIndex = (height - 1 - px) * width + py;
                     break;
                 case Rotation::R180:
-                    srcIndex = (size - 1 - py) * size + (size - 1 - px);
+                    srcIndex = (height - 1 - py) * width + (width - 1 - px);
                     break;
                 case Rotation::R270:
-                    srcIndex = px * size + (size - 1 - py);
+                    srcIndex = px * width + (width - 1 - py);
                     break;
             }
 
@@ -247,7 +251,8 @@ void Renderer::executeCommands() {
                 drawSpriteInternal(cmd.x, cmd.y,
                                    cmd.sprite.pixels,
                                    cmd.sprite.palette,
-                                   cmd.sprite.size,
+                                   cmd.sprite.width,
+                                   cmd.sprite.height,
                                    rot);
                 m_diagnostics.commandsExecuted++;
                 break;

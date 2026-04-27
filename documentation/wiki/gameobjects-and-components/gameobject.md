@@ -103,7 +103,7 @@ Example:
 ```cpp
 class Player : public GameObject {
 public:
-    SpriteRenderer spriteRenderer = SpriteRenderer(this, &SPRITE_PLAYER, PALETTE_WARM, RenderLayer::Player);
+    SpriteRenderer spriteRenderer = SpriteRenderer(this, &SPRITE_PLAYER, RenderLayer::Player);
     Animator       animator       = Animator(&spriteRenderer, WALK_FRAMES, 4);
 };
 ```

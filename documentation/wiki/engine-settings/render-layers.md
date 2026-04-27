@@ -51,7 +51,7 @@ enum class CollisionLayer : uint16_t {
 Pass a layer when creating a sprite:
 
 ```cpp
-SpriteRenderer sr = SpriteRenderer(this, &playerSprite, PALETTE_WARM, RenderLayer::Player);
+SpriteRenderer sr = SpriteRenderer(this, &playerSprite, RenderLayer::Player);
 ```
 
 See [Sprite Renderer](../gameobjects-and-components/sprite-renderer.md) for more details.

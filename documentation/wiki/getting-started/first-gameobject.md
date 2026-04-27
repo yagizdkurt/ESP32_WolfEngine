@@ -76,27 +76,27 @@ void Update() override {
 ## Adding a Sprite
 First define pixel data and create a `Sprite` asset in flash, then attach a `SpriteRenderer` component.
 
-Sprite sizes must be odd numbers (1x1, 3x3, 5x5, 7x7 ...). Even sizes are not supported.
+Sprite pixel arrays use `[H][W]` shape (rows × columns). `W` and `H` can be different, and each must be in `1..63`.
 
 Pixel data must be declared as a separate `constexpr` array — inline initializer lists are not supported.
 
 ```cpp
 #include "WolfEngine/WolfEngine.hpp"
 
-constexpr uint8_t myPixels[7 * 7] = {
-    0, 0, 1, 1, 1, 0, 0,
-    0, 1, 1, 1, 1, 1, 0,
-    0, 1, 2, 1, 2, 1, 0,
-    0, 1, 1, 1, 1, 1, 0,
-    0, 1, 2, 1, 2, 1, 0,
-    0, 1, 1, 2, 1, 1, 0,
-    0, 0, 1, 1, 1, 0, 0,
+constexpr uint8_t myPixels[7][7] = {
+    {0, 0, 1, 1, 1, 0, 0},
+    {0, 1, 1, 1, 1, 1, 0},
+    {0, 1, 2, 1, 2, 1, 0},
+    {0, 1, 1, 1, 1, 1, 0},
+    {0, 1, 2, 1, 2, 1, 0},
+    {0, 1, 1, 2, 1, 1, 0},
+    {0, 0, 1, 1, 1, 0, 0},
 };
-constexpr Sprite MY_SPRITE = Sprite::Create(myPixels);
+constexpr Sprite MY_SPRITE = Sprite::Create(myPixels, PALETTE_WARM);
 
 class MyObject : public GameObject {
 public:
-    SpriteRenderer spriteRenderer = SpriteRenderer(this, &MY_SPRITE, PALETTE_WARM, RenderLayer::Player);
+    SpriteRenderer spriteRenderer = SpriteRenderer(this, &MY_SPRITE, RenderLayer::Player);
     Controller* controller = nullptr;
 
     void Start() override {
@@ -112,7 +112,7 @@ public:
 };
 ```
 
-The sprite draws at `transform.position` every frame automatically.
+The sprite anchor draws at `transform.position` every frame automatically. By default this anchor is centered (`W/2`, `H/2`).
 
 `0` in pixel data is always transparent. Indices `1`–`31` map to palette colors.
 
@@ -125,20 +125,20 @@ The sprite draws at `transform.position` every frame automatically.
 ```cpp
 #include "WolfEngine/WolfEngine.hpp"
 
-constexpr uint8_t playerPixels[7 * 7] = {
-    0, 0, 1, 1, 1, 0, 0,
-    0, 1, 1, 1, 1, 1, 0,
-    0, 1, 2, 1, 2, 1, 0,
-    0, 1, 1, 1, 1, 1, 0,
-    0, 1, 2, 1, 2, 1, 0,
-    0, 1, 1, 2, 1, 1, 0,
-    0, 0, 1, 1, 1, 0, 0,
+constexpr uint8_t playerPixels[7][7] = {
+    {0, 0, 1, 1, 1, 0, 0},
+    {0, 1, 1, 1, 1, 1, 0},
+    {0, 1, 2, 1, 2, 1, 0},
+    {0, 1, 1, 1, 1, 1, 0},
+    {0, 1, 2, 1, 2, 1, 0},
+    {0, 1, 1, 2, 1, 1, 0},
+    {0, 0, 1, 1, 1, 0, 0},
 };
-constexpr Sprite SPRITE_PLAYER = Sprite::Create(playerPixels);
+constexpr Sprite SPRITE_PLAYER = Sprite::Create(playerPixels, PALETTE_GRAYSCALE);
 
 class Player : public GameObject {
 public:
-    SpriteRenderer spriteRenderer = SpriteRenderer(this, &SPRITE_PLAYER, PALETTE_GRAYSCALE, RenderLayer::Player);
+    SpriteRenderer spriteRenderer = SpriteRenderer(this, &SPRITE_PLAYER, RenderLayer::Player);
     Controller* controller = nullptr;
 
     void Start() override {

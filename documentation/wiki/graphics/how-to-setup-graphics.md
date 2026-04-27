@@ -12,7 +12,7 @@ Getting a sprite on screen requires three things working together:
 |-------------|------------------|-----------------------------------------|
 | Pixel data  | Flash (`constexpr`) | Defines the shape using palette indices |
 | Palette     | Flash (`constexpr`) | Maps indices to RGB565 colors           |
-| SpriteRenderer component | GameObject | Connects pixel data + palette to the renderer |
+| Sprite + SpriteRenderer | Flash + GameObject | `Sprite` bundles pixels, palette, dimensions, anchor; `SpriteRenderer` submits it to the renderer |
 
 ---
 
@@ -45,20 +45,22 @@ PL_GS_
 
 ## Step 2 — Define Pixel Data
 
-Create a `constexpr uint8_t` array. Each value is a palette index (0–31). Index 0 is always transparent. Sprites must be square — valid sizes are NxN where N is odd.
+Create a `constexpr uint8_t` 2D array as `[H][W]` (rows × columns). Each value is a palette index (0–31). Index 0 is always transparent. `W` and `H` can be different; each must be in `1..63`.
 
 ```cpp
 // 0 = transparent, 1 = dark, 2 = mid, 3 = light
-constexpr uint8_t PlayerPixels[] = { // 7x7
-    0, 0, 1, 1, 1, 1, 0, 
-    0, 1, 2, 2, 2, 2, 1, 
-    0, 1, 2, 3, 3, 2, 1, 
-    1, 2, 3, 2, 2, 3, 2, 
-    1, 2, 3, 2, 2, 3, 2, 
-    0, 1, 2, 3, 3, 2, 1, 
-    0, 1, 2, 2, 2, 2, 1, 
-    0, 0, 1, 1, 1, 1, 0, 
+constexpr uint8_t PlayerPixels[8][8] = {
+    { 0, 0, 1, 1, 1, 1, 0, 0 },
+    { 0, 1, 2, 2, 2, 2, 1, 0 },
+    { 0, 1, 2, 3, 3, 2, 1, 0 },
+    { 1, 2, 3, 2, 2, 3, 2, 1 },
+    { 1, 2, 3, 2, 2, 3, 2, 1 },
+    { 0, 1, 2, 3, 3, 2, 1, 0 },
+    { 0, 1, 2, 2, 2, 2, 1, 0 },
+    { 0, 0, 1, 1, 1, 1, 0, 0 },
 };
+
+constexpr Sprite SPRITE_PLAYER = Sprite::Create(PlayerPixels, PALETTE_GRAYSCALE);
 ```
 
 > ✅ Keep pixel data in a separate header like `MyObject_Sprites.hpp` to keep your GameObject class clean.
@@ -82,7 +84,7 @@ The SpriteRenderer submits a sprite draw command during component tick. The rend
 
 class Player : public GameObject {
 public:
-    SpriteRenderer spriteRenderer = SpriteRenderer(this, &SPRITE_PLAYER, PALETTE_GRAYSCALE, RenderLayer::Player);
+    SpriteRenderer spriteRenderer = SpriteRenderer(this, &SPRITE_PLAYER, RenderLayer::Player);
 
     void Start() override {
         transform.position = { 64, 64 };
@@ -103,10 +105,10 @@ public:
 Layers control draw order. Lower layers are drawn first — higher layers appear on top. Assign the layer at SpriteRenderer construction time:
 
 ```cpp
-SpriteRenderer background = SpriteRenderer(this, &BG_SPRITE, PALETTE_COOL, RenderLayer::BackGround);
-SpriteRenderer enemy      = SpriteRenderer(this, &ENEMY_SPRITE, PALETTE_WARM, RenderLayer::Entities);
-SpriteRenderer player     = SpriteRenderer(this, &PLAYER_SPRITE, PALETTE_GRAYSCALE, RenderLayer::Player);
-SpriteRenderer explosion  = SpriteRenderer(this, &FX_SPRITE, PALETTE_SUNSET, RenderLayer::FX);
+SpriteRenderer background = SpriteRenderer(this, &BG_SPRITE, RenderLayer::BackGround);
+SpriteRenderer enemy      = SpriteRenderer(this, &ENEMY_SPRITE, RenderLayer::Entities);
+SpriteRenderer player     = SpriteRenderer(this, &PLAYER_SPRITE, RenderLayer::Player);
+SpriteRenderer explosion  = SpriteRenderer(this, &FX_SPRITE, RenderLayer::FX);
 ```
 
 See [Render Layers](../engine-settings/render-layers.md) to customize the layer list.
@@ -115,16 +117,20 @@ Within the same layer, sprites are sorted by draw Y by default. Use `setSortKey(
 
 ---
 
-## Palette Swapping
+## Palette Variants
 
-Swap the palette at runtime for effects like damage flash or color variants:
+To swap colors at runtime, prepare multiple `Sprite` assets that share the same pixel array and switch sprites:
 
 ```cpp
+constexpr uint8_t playerPixels[8][8] = { /* ... */ };
+constexpr Sprite PLAYER_NORMAL = Sprite::Create(playerPixels, PALETTE_GRAYSCALE);
+constexpr Sprite PLAYER_HIT    = Sprite::Create(playerPixels, PALETTE_SUNSET);
+
 void Update() override {
     if (isHit) {
-        spriteRenderer.setPalette(PALETTE_SUNSET);  // flash red/pink on hit
+        spriteRenderer.setSprite(&PLAYER_HIT);
     } else {
-        spriteRenderer.setPalette(PALETTE_GRAYSCALE);  // normal
+        spriteRenderer.setSprite(&PLAYER_NORMAL);
     }
 }
 ```
@@ -145,21 +151,24 @@ spriteRenderer.setRotation(Rotation::R270);  // face left
 ## Full Example — Animated Coin
 
 ```cpp
-constexpr uint8_t CoinA[] = { // 3x3 frame A
-    0, 1, 0,
-    1, 2, 1, 
-    0, 1, 0,
+constexpr uint8_t CoinA[3][3] = {
+    {0, 1, 0},
+    {1, 2, 1},
+    {0, 1, 0},
 };
 
-constexpr uint8_t CoinB[] = { // 3x3 frame B
-    0, 1, 0,
-    0, 1, 0,
-    0, 1, 0,
+constexpr uint8_t CoinB[3][3] = {
+    {0, 1, 0},
+    {0, 1, 0},
+    {0, 1, 0},
 };
+
+constexpr Sprite COIN_A = Sprite::Create(CoinA, PALETTE_WARM);
+constexpr Sprite COIN_B = Sprite::Create(CoinB, PALETTE_WARM);
 
 class Coin : public GameObject {
 public:
-    SpriteRenderer spriteRenderer = SpriteRenderer(this, &COIN_A, PALETTE_WARM, RenderLayer::Entities);
+    SpriteRenderer spriteRenderer = SpriteRenderer(this, &COIN_A, RenderLayer::Entities);
 
     void Update() override {
         m_timer++;
