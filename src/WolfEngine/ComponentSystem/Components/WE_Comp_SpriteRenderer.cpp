@@ -14,7 +14,44 @@ SpriteRenderer::SpriteRenderer(GameObject* owner, const Sprite* sprite, RenderLa
     owner->registerComponent(this);
 }
 
-void SpriteRenderer::preRenderTick() { if constexpr (Settings.render.spriteSystemEnabled) onDraw(); }
+void SpriteRenderer::setPaletteOverride(const uint16_t* palette) {
+    m_paletteOverride = palette;
+    m_usePaletteOverride = (palette != nullptr);
+    m_useTimedPaletteOverride = false;
+    m_paletteOverrideDurationMs = 0;
+    m_paletteOverrideTimer.stop();
+}
+
+void SpriteRenderer::clearPaletteOverride() {
+    m_paletteOverride = nullptr;
+    m_usePaletteOverride = false;
+    m_useTimedPaletteOverride = false;
+    m_paletteOverrideDurationMs = 0;
+    m_paletteOverrideTimer.stop();
+}
+
+void SpriteRenderer::PaletteOverride(float seconds, const uint16_t* palette) {
+    if (palette == nullptr || seconds <= 0.0f) {
+        clearPaletteOverride();
+        return;
+    }
+    setPaletteOverride(palette);
+    m_useTimedPaletteOverride = true;
+    m_paletteOverrideDurationMs = static_cast<int64_t>(seconds * 1000.0f + 0.5f);
+    m_paletteOverrideTimer.start();
+}
+
+void SpriteRenderer::PaletteOverrideTick(uint32_t tickCount, const uint16_t* palette) {
+    PaletteOverride(static_cast<float>(tickCount) * WETime::DELTA_TIME, palette);
+}
+
+void SpriteRenderer::preRenderTick() {
+    if (m_useTimedPaletteOverride &&
+        m_paletteOverrideTimer.elapsed(m_paletteOverrideDurationMs)) {
+        clearPaletteOverride();
+    }
+    if constexpr (Settings.render.spriteSystemEnabled) onDraw();
+}
 
 void SpriteRenderer::onDraw() {
     if (!m_visible || !m_sprite) return;
@@ -71,7 +108,7 @@ void SpriteRenderer::onDraw() {
                           : WE_Math::clampToByte(topY);
     cmd.sortKey       = cmdMakeSortKey(static_cast<RenderLayer>(m_layer), sortByte);
     cmd.sprite.pixels  = m_sprite->pixels;
-    cmd.sprite.palette = m_sprite->palette;
+    cmd.sprite.palette = m_usePaletteOverride ? m_paletteOverride : m_sprite->palette;
     cmd.sprite.width   = static_cast<uint8_t>(W);
     cmd.sprite.height  = static_cast<uint8_t>(H);
 

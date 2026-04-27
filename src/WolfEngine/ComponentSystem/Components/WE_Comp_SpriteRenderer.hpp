@@ -3,6 +3,7 @@
 #include "WolfEngine/Graphics/SpriteSystem/WE_Sprite.hpp"
 #include "WolfEngine/Graphics/RenderSystem/WE_DrawCommand.hpp"
 #include "WolfEngine/Settings/WE_Settings.hpp"
+#include "WolfEngine/Utilities/WE_Timer.hpp"
 #include "WE_BaseComp.hpp"
 
 // =============================================================
@@ -28,50 +29,101 @@
 
 class SpriteRenderer : public Component {
 public:
-
-    // Construct and enable ticking to submit DrawCommands each frame.
-    //
-    // owner   — pointer to the owning GameObject (pass 'this')
-    // sprite  — pointer to a constexpr Sprite asset in flash (palette bundled in sprite)
-    // layer   — render layer, defaults to RenderLayer::Default
+    /**
+     * @brief Construct a sprite renderer component for a GameObject.
+     *
+     * The component registers itself on the owner and submits sprite draw commands
+     * during pre-render tick when sprite rendering is enabled.
+     *
+     * @param owner Pointer to the owning GameObject (typically @c this).
+     * @param sprite Pointer to a Sprite asset (pixels/palette/anchor metadata).
+     * @param layer Render layer used for sorting and draw order.
+     */
     SpriteRenderer(class GameObject*  owner,
                    const Sprite*      sprite,
                    RenderLayer        layer = RenderLayer::Default);
 
+    /** @brief Destroy the component. */
     ~SpriteRenderer() = default;
 
-    // ---------------------------------------------------------
-    //  Runtime controls
-    // ---------------------------------------------------------
-
-    // Swap the active Sprite asset — used by Animator for frame changes.
+    /**
+     * @brief Set the active sprite asset.
+     * @param sprite New sprite pointer. Used by Animator to switch frames.
+     */
     void setSprite(const Sprite* sprite)     { m_sprite   = sprite;    }
 
-    // -------------------------------------------------------------
-    //  Change rotation
-    //
-    //  Rotation:
-    //  Represents the four supported 90-degree snap rotations.
-    //  Applied by the renderer during drawing — sprite pixel data
-    //  itself never changes, the renderer reads it in a different
-    //  order depending on this value.
-    //
-    //  R0   — Normal, no rotation
-    //  R90  — 90 degrees clockwise
-    //  R180 — 180 degrees (upside down)
-    //  R270 — 270 degrees clockwise (or 90 counter-clockwise)
-    // -------------------------------------------------------------
+    /**
+     * @brief Enable a runtime palette override.
+     * @param palette Pointer to the override palette.
+     */
+    void setPaletteOverride(const uint16_t* palette);
+
+    /** @brief Disable palette override and fall back to the sprite palette. */
+    void clearPaletteOverride();
+
+    /** @brief Check whether a palette override is active. */
+    bool hasPaletteOverride() const { return m_usePaletteOverride; }
+
+    /**
+     * @brief Get the currently configured palette override pointer.
+     * @return Override palette pointer, or @c nullptr when no override is set.
+     */
+    const uint16_t* getPaletteOverride() const { return m_paletteOverride; }
+
+    /**
+     * @brief Apply a timed palette override using seconds.
+     * @param seconds Override duration in seconds.
+     * @param palette Pointer to the override palette.
+     */
+    void PaletteOverride(float seconds, const uint16_t* palette);
+
+    /**
+     * @brief Apply a timed palette override using engine ticks.
+     * @param tickCount Duration expressed in engine ticks.
+     * @param palette Pointer to the override palette.
+     */
+    void PaletteOverrideTick(uint32_t tickCount, const uint16_t* palette);
+
+    /**
+     * @brief Set sprite rotation in 90-degree steps.
+     *
+     * Rotation is applied by the renderer at draw time. Pixel data remains unchanged.
+     *
+     * Supported values:
+     * - Rotation::R0
+     * - Rotation::R90
+     * - Rotation::R180
+     * - Rotation::R270
+     *
+     * @param rotation New rotation value.
+     */
     void setRotation(Rotation rotation)      { m_rotation = rotation;  }
 
-    // Show or hide without removing from the render layer.
+    /**
+     * @brief Show or hide the sprite without detaching the component.
+     * @param visible True to render, false to skip submission.
+     */
     void setVisible(bool visible)            { m_visible  = visible;   }
+
+    /**
+     * @brief Override default within-layer sorting.
+     * @param key Explicit sort key value used instead of automatic draw Y sort.
+     */
     void setSortKey(int16_t key) { m_sortKeyOverride = key; m_useSortKeyOverride = true; }
+
+    /** @brief Clear explicit sort key and restore automatic sorting. */
     void clearSortKey()          { m_useSortKeyOverride = false; }
 
-
+    /** @brief Get the currently active sprite asset pointer. */
     const Sprite* getSprite()   const { return m_sprite;   }
+
+    /** @brief Check whether this renderer is currently visible. */
     bool          isVisible()   const { return m_visible;  }
+
+    /** @brief Get current rotation. */
     Rotation      getRotation() const { return m_rotation; }
+
+    /** @brief Get render layer as raw byte value. */
     uint8_t       getLayer()    const { return m_layer;    }
 
 private:
@@ -80,8 +132,13 @@ private:
 
     class GameObject*  m_owner;
     const Sprite*      m_sprite;
+    const uint16_t*    m_paletteOverride = nullptr;
     uint8_t            m_layer;
     Rotation           m_rotation = Rotation::R0;
+    Timer              m_paletteOverrideTimer;
+    int64_t            m_paletteOverrideDurationMs = 0;
+    bool               m_usePaletteOverride = false;
+    bool               m_useTimedPaletteOverride = false;
     bool               m_useSortKeyOverride = false;
     int16_t            m_sortKeyOverride = 0;
     bool               m_visible  = true;
