@@ -10,6 +10,12 @@ Built with PlatformIO and ESP-IDF. No Unity. No Godot. Just you, your ESP32, and
 
 ---
 
+# Development Notice
+
+Wolfengine is still in development and havent done 1.0 release. You can test it but dont expect production grade performance atm. We are developing it non-stop every day so flux is real! If you want to contribute we are always looking to expand the team! Sincerely - WolfEngine development team of one.
+
+---
+
 ## ✨ What It Can Do
 
 - 🧱 Zero-touch asset pipeline — Drop PNGs into the project and build; sprites are auto-converted into `constexpr` data with optional palette control. No manual C++ asset coding required.
