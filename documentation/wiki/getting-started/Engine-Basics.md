@@ -4,8 +4,6 @@ This page explains the small pieces you need to get a WolfEngine project running
 
 ---
 
-<div align="center">
-
 ## The Short Version
 
 **Remember this flow:**
@@ -30,9 +28,6 @@ WolfEngine keeps engine code and game code separate on purpose.
 | `src/GeneratedAssets/` | Auto-generated assets created by the asset pipeline |
 
 Put your own gameplay classes in `src/GameCode/`
-
-
-</div>
 
 ---
 

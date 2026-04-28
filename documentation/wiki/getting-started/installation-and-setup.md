@@ -4,8 +4,6 @@ WolfEngine runs on ESP32 with a display, built with PlatformIO and the ESP-IDF f
 
 ---
 
-<div align="center">
-
 ## Requirements
 
 | Tool        | Recommended / Minimum |
@@ -16,8 +14,6 @@ WolfEngine runs on ESP32 with a display, built with PlatformIO and the ESP-IDF f
 | Build system| PlatformIO (recommended) or CMake + ESP-IDF |
 | Board       | ESP32                 |
 | Display     | ST7735 TFT 128x160 (default driver) |
-
-</div>
 
 **Notes:**
 - `Python` is required by the asset pipeline (`tools/asset_converter.py`) and a small pre-build script. Install dependencies with `pip install -r tools/requirements.txt`.
@@ -117,7 +113,7 @@ If you see an SDL window, the desktop build is working.
 
 If your ESP32 board uses a CP210x or CH340 serial chip, install the corresponding driver from the vendor website before attempting to flash or monitor the device.
 
-<div align="center">
+
 
 ### Troubleshooting (common problems)
 
@@ -128,4 +124,3 @@ If your ESP32 board uses a CP210x or CH340 serial chip, install the correspondin
 | Serial port not detected on Windows | Missing USB driver (CP210x/CH340) | Install vendor USB driver; replug device |
 | `IDF_PATH` not found (native build) | ESP-IDF not sourced | Run `export IDF_PATH=...` or use ESP-IDF shell/setup script |
 | Stale generated assets | Asset converter not run or build cache | `rm -rf src/GeneratedAssets && python tools/asset_converter.py ...` then rebuild |
-<div/>
