@@ -99,10 +99,6 @@ void SpriteRenderer::onDraw() {
             break;
     }
 
-    // Output dimensions swap at 90°/270°
-    const int outW = (m_rotation == Rotation::R90 || m_rotation == Rotation::R270) ? H : W;
-    const int outH = (m_rotation == Rotation::R90 || m_rotation == Rotation::R270) ? W : H;
-
     DrawCommand cmd;
     cmd.type          = DrawCommandType::Sprite;
     cmd.x             = topX;
