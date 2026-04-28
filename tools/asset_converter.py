@@ -36,9 +36,10 @@ def nearest_idx(r: int, g: int, b: int, palette_rgb: list) -> int:
     return best_i + 1  # 1-based
 
 
-def name_to_symbol(filename: str) -> str:
-    """'player_idle.png'  →  'PLAYER_IDLE'"""
-    return pathlib.Path(filename).stem.upper().replace('-', '_')
+def name_to_symbol(image_path, images_dir) -> str:
+    relative = pathlib.Path(image_path).relative_to(images_dir)
+    parts = relative.with_suffix("").parts
+    return "_".join(parts).upper().replace("-", "_")
 
 
 def fmt_hex(v: int) -> str:
@@ -176,14 +177,14 @@ def render_auto_palette_array(stem: str, palette565: list) -> str:
     return '\n'.join(lines)
 
 
-def emit_auto_cpp(output_dir: str, stem: str, symbol: str,
+def emit_auto_cpp(output_dir: str, stem: str, symbol: str, source_rel: str,
                   indices_2d: list, palette565: list, w: int, h: int):
     pixel_block = render_pixel_array(stem, indices_2d, w, h)
     palette_block = render_auto_palette_array(stem, palette565)
 
     content = (
         f"// AUTO-GENERATED — do not edit\n"
-        f"// Source: {stem}.png  [{w}W x {h}H]\n"
+        f"// Source: {source_rel}  [{w}W x {h}H]\n"
         f"#include \"WE_Assets.hpp\"\n"
         f"\n"
         f"{pixel_block}\n"
@@ -198,7 +199,7 @@ def emit_auto_cpp(output_dir: str, stem: str, symbol: str,
     return str(out_path)
 
 
-def emit_named_cpp(output_dir: str, stem: str, symbol: str,
+def emit_named_cpp(output_dir: str, stem: str, symbol: str, source_rel: str,
                    indices_2d: list, w: int, h: int,
                    palette_name: str, palette_header: str):
     pixel_block = render_pixel_array(stem, indices_2d, w, h)
@@ -206,7 +207,7 @@ def emit_named_cpp(output_dir: str, stem: str, symbol: str,
 
     content = (
         f"// AUTO-GENERATED — do not edit\n"
-        f"// Source: {stem}.png  [{w}W x {h}H]  palette: {palette_name}\n"
+        f"// Source: {source_rel}  [{w}W x {h}H]  palette: {palette_name}\n"
         f"#include \"WE_Assets.hpp\"\n"
         f"#include \"{include_path}\"\n"
         f"\n"
@@ -253,17 +254,34 @@ def main(images_dir: str, output_dir: str, palettes_dir: str):
         asset_config = _load_toml(assets_toml_path)
 
     # --- Collect PNGs (sorted for deterministic output) ---
-    png_files = sorted(images_path.glob('*.png'), key=lambda p: p.name.lower())
-    png_stems = {p.stem.lower() for p in png_files}
+    png_files = sorted(images_path.rglob('*.png'), key=lambda p: str(p).lower())
+    png_config_keys = {
+        "_".join(p.relative_to(images_path).with_suffix("").parts).lower().replace("-", "_")
+        for p in png_files
+    }
 
     # --- Validate assets.toml keys ---
     for key in asset_config:
-        if key.lower() not in png_stems:
-            print(f"WARNING: assets.toml entry '[{key}]' has no matching {key}.png — skipping.")
+        if key.lower() not in png_config_keys:
+            print(f"WARNING: assets.toml entry '[{key}]' has no matching PNG — skipping.")
 
     # --- Track existing .cpp files for stale cleanup ---
     existing_cpps = {p for p in output_path.glob('*.cpp')}
     written_cpps = set()
+
+    # --- Detect symbol conflicts ---
+    symbol_map = {}
+    conflicts = set()
+    for png_path in png_files:
+        sym = name_to_symbol(png_path, images_path)
+        if sym in symbol_map:
+            if sym not in conflicts:
+                print(f"ERROR: Symbol conflict — Assets::{sym} would be produced by both:\n"
+                      f"  {symbol_map[sym]}\n  {png_path}\n"
+                      f"Skipping both. Rename one of these files.")
+            conflicts.add(sym)
+        else:
+            symbol_map[sym] = png_path
 
     converted = 0
     skipped = 0
@@ -271,25 +289,32 @@ def main(images_dir: str, output_dir: str, palettes_dir: str):
     symbols = []
 
     for png_path in png_files:
-        stem = png_path.stem
-        symbol = name_to_symbol(png_path.name)
+        symbol = name_to_symbol(png_path, images_path)
+
+        if symbol in conflicts:
+            errors += 1
+            continue
+
+        stem = symbol.lower()
+        relative = png_path.relative_to(images_path)
+        source_rel = str(relative).replace("\\", "/")
+        config_key = "_".join(relative.with_suffix("").parts).lower().replace("-", "_")
 
         try:
             img = Image.open(png_path).convert('RGBA')
         except Exception as e:
-            print(f"ERROR: Could not open {png_path.name}: {e}")
+            print(f"ERROR: Could not open {source_rel}: {e}")
             errors += 1
             continue
 
         w, h = img.size
 
         if w > 96 or h > 96:
-            print(f"ERROR: {png_path.name} is {w}x{h}, max dimension is 96. Skipping.")
+            print(f"ERROR: {source_rel} is {w}x{h}, max dimension is 96. Skipping.")
             errors += 1
             continue
 
-        # Look up config by stem (case-insensitive match against toml keys)
-        cfg = next((v for k, v in asset_config.items() if k.lower() == stem.lower()), {})
+        cfg = asset_config.get(config_key, {})
         palette_key = cfg.get('palette') if cfg else None
 
         if palette_key:
@@ -307,19 +332,19 @@ def main(images_dir: str, output_dir: str, palettes_dir: str):
             palette_header = palette_data['meta']['header']
             indices_2d = named_palette_convert(img, palette_rgb)
             cpp_path = emit_named_cpp(
-                output_dir, stem, symbol, indices_2d, w, h, palette_name, palette_header
+                output_dir, stem, symbol, source_rel, indices_2d, w, h, palette_name, palette_header
             )
         else:
             # Auto-palette path
             indices_2d, palette565 = auto_palette_convert(img)
             cpp_path = emit_auto_cpp(
-                output_dir, stem, symbol, indices_2d, palette565, w, h
+                output_dir, stem, symbol, source_rel, indices_2d, palette565, w, h
             )
 
         written_cpps.add(pathlib.Path(cpp_path))
         symbols.append(symbol)
         converted += 1
-        print(f"  Converted: {png_path.name}  [{w}W x {h}H]  →  {stem}.cpp")
+        print(f"  Converted: {source_rel}  [{w}W x {h}H]  →  {stem}.cpp")
 
     # --- Clean up stale .cpp files ---
     for stale in existing_cpps - written_cpps:

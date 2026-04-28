@@ -24,24 +24,36 @@
 !desktop/**
 !.github/
 !.github/**
-!tools/
-!tools/**
 !Images/
 !test/
+
+# And some special Rules for Tools folder...
+!tools/
+!tools/**
+tools/palettes/**
+!tools/palettes/coolData.toml
+!tools/palettes/gameboyData.toml
+!tools/palettes/grayscaleData.toml
+!tools/palettes/sunsetData.toml
+!tools/palettes/warmData.toml
+
+# And some special Rules for GeneratedAssets folder...
+src/GeneratedAssets/WE_Assets.hpp
+!src/GeneratedAssets/Readme.md
+
+src/GeneratedAssets/palettes/**
+!src/GeneratedAssets/palettes/.gitkeep
+
+src/GeneratedAssets/sprites/**
+!src/GeneratedAssets/sprites/.gitkeep
+
+# And some special rules for Images folder...
+Images/**
+!Images/assets.toml
 
 # then exclude build and game specific sources...
 desktop/build/
 src/GameCode/**
-src/GeneratedAssets/WE_Assets.hpp
-src/GeneratedAssets/palettes/**
-src/GeneratedAssets/sprites/**
-Images/**
 
 #but not config files in those folders...
-!Images/assets.toml
-!src/GeneratedAssets/Readme.md
 !test/readme.md
-
-# and finally not to ignore empty folders...
-!src/GeneratedAssets/sprites/.gitkeep
-!src/GeneratedAssets/palettes/.gitkeep
