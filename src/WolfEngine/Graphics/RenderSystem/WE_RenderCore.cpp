@@ -377,7 +377,9 @@ void Renderer::renderPass() {
 // -------------------------------------------------------------
 void Renderer::render() {
     auto t0 = WE_DiagBegin();
+#if !WE_DUAL_CORE_RENDER
     beginFrame();
+#endif
     renderPass();
     m_renderDiag.renderTotalUs = WE_DiagElapsedUs(t0);
     if (++m_diagFrameCount >= WE_DIAG_LOG_INTERVAL_FRAMES) {

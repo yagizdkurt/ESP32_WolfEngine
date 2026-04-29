@@ -97,10 +97,16 @@ public:
         ret = esp_lcd_panel_init(m_panel);
         if (ret != ESP_OK) { WE_LOGE(TAG, "Panel init failed: %s", esp_err_to_name(ret)); goto err_panel; }
 
-        esp_lcd_panel_invert_color(m_panel, false);
-        esp_lcd_panel_mirror(m_panel, true, true);
+        ret = esp_lcd_panel_invert_color(m_panel, false);
+        if (ret != ESP_OK) WE_LOGW(TAG, "invert_color failed: %s", esp_err_to_name(ret));
+
+        ret = esp_lcd_panel_mirror(m_panel, true, true);
+        if (ret != ESP_OK) WE_LOGW(TAG, "mirror failed: %s", esp_err_to_name(ret));
+
         esp_lcd_panel_set_gap(m_panel, 0, 0);
-        esp_lcd_panel_disp_on_off(m_panel, true);
+
+        ret = esp_lcd_panel_disp_on_off(m_panel, true);
+        if (ret != ESP_OK) WE_LOGW(TAG, "disp_on_off failed: %s", esp_err_to_name(ret));
 
         m_initialized = true;
         WE_LOGI(TAG, "ST7735 initialized successfully");
@@ -108,8 +114,12 @@ public:
 
         // --- Cleanup on failure ---
         err_panel:
-            esp_lcd_panel_del(m_panel);  m_panel = NULL;
-            esp_lcd_panel_io_del(m_io);  m_io    = NULL;
+            if (m_panel) { 
+                esp_lcd_panel_del(m_panel);  
+                m_panel = NULL; 
+            }
+            esp_lcd_panel_io_del(m_io);  
+            m_io = NULL;
         err_panel_io:
             spi_bus_free(SPI2_HOST);
         err_spi_bus:

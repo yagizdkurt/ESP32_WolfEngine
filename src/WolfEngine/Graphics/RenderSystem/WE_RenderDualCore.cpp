@@ -29,6 +29,7 @@ void Renderer::displayTask_impl() {
 void Renderer::renderPass() {
     xSemaphoreTake(m_bufferFree, portMAX_DELAY);
     m_framebuffer = m_framebuffers[m_backBufIdx];
+    beginFrame();
     executeWorldPass();
     executeUIPass();
     xSemaphoreGive(m_renderReady);
