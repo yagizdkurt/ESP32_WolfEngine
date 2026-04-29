@@ -10,7 +10,10 @@ void Renderer::displayTask_wrapper(void* param) {
 
 void Renderer::displayTask_impl() {
     while (true) {
-        xSemaphoreTake(m_renderReady, portMAX_DELAY);
+        if (xSemaphoreTake(m_renderReady, pdMS_TO_TICKS(500)) != pdTRUE) {
+            WE_LOGE("Renderer", "displayTask: renderReady timeout — render task stalled?");
+            continue;
+        }
         if (m_displayTaskShouldExit) break;
 
         m_frontBufIdx ^= 1;
@@ -27,7 +30,10 @@ void Renderer::displayTask_impl() {
 }
 
 void Renderer::renderPass() {
-    xSemaphoreTake(m_bufferFree, portMAX_DELAY);
+    if (xSemaphoreTake(m_bufferFree, pdMS_TO_TICKS(500)) != pdTRUE) {
+        WE_LOGE("Renderer", "renderPass: bufferFree timeout — display task stalled?");
+        return;
+    }
     m_framebuffer = m_framebuffers[m_backBufIdx];
     beginFrame();
     executeWorldPass();

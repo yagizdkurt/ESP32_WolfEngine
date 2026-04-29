@@ -15,15 +15,15 @@
 // When 0: single-core path — byte-for-byte identical to the baseline.
 // Auto-forced to 0 on desktop (ESP_PLATFORM absent — no FreeRTOS, no DMA).
 #ifdef ESP_PLATFORM
-    #define WE_DUAL_CORE_RENDER 0   // <-- user-editable
+    #define WE_DUAL_CORE_RENDER 1   // <-- user-editable
 #else
     #define WE_DUAL_CORE_RENDER 0   // forced off; do not edit
 #endif
 
 #if WE_DUAL_CORE_RENDER
-    // Stack for the display task. 4096 bytes is safe: flush() calls
-    // xSemaphoreTake + esp_lcd_panel_draw_bitmap with shallow ESP-IDF stack depth.
-    #define DISPLAY_TASK_STACK_SIZE  4096
+    // Stack for the display task. flush() calls into esp_lcd_panel_draw_bitmap
+    // which traverses the ESP-IDF LCD panel IO → SPI DMA layer — not a shallow chain.
+    #define DISPLAY_TASK_STACK_SIZE  8192
 
     // Priority 5 puts the display task above typical user tasks (priority 1–3)
     // but below FreeRTOS system tasks. Since it blocks on semaphores most of the

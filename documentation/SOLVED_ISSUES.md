@@ -7,14 +7,16 @@ are written. Active (unresolved) issues live in KNOWN_ISSUES.md.
 Each entry follows this exact structure:
 
 ## <Short Title>
-RESOLVED in <Phase> - <DD.MM.YY>
+RESOLVED in - <DD.MM.YY>
 **Location:** <file(s) and specific area affected>
 **What it did:** <what the problem was and why it was acceptable or unnoticed>
-**Resolution (<Phase>):** <what was changed and why, including any design decisions>
+**Resolution:** <what was changed and why, including any design decisions>
 - Bullet points for specific code or file changes
 - Keep it precise enough that a future developer can understand the decision without
   reading the git diff
 **Extra Notes** any extra notes to be informed.
+
+note: Phases are just for SDL integration fixes. Dont use phases for normal engine issues.
 ---
 
 ## Rules for AI Assistants
@@ -28,6 +30,42 @@ RESOLVED in <Phase> - <DD.MM.YY>
 - If multiple issues are resolved in the same phase, add them as separate entries.
 
 -----------------------------------------------------------------------------------------
+
+## I2C ISR Fires During Driver Install
+RESOLVED in - 29.04.26
+**Location:** `src/WolfEngine/WolfEngine.cpp` — `initializeDrivers()` / `initializeSubsystems()`
+**What it did:** During cold boot the I2C driver was enabled (ISR active) and an immediate write to the PCF8574 expander occurred while the physical bus lines could still be unstable. That produced interrupt storms and `TG0WDT_SYS_RESET` resets on some boots.
+**Resolution:** Addressed the immediate race between driver enable and first device access by deferring first device I2C traffic and adding a short bus-stabilization delay:
+- Added `vTaskDelay(pdMS_TO_TICKS(50))` at the end of `initializeDrivers()` immediately after `I2CManager::begin()` to give the bus time to reach idle-high before any device writes.
+- Moved `m_InputManager.init()` to the end of `initializeSubsystems()` so PCF8574 writes occur after renderer bring-up, providing additional temporal separation of bus activity.
+- Verification: serial boot logs should show `I2C driver ready` before any expander-ready messages; no `TG0WDT_SYS_RESET` observed across multiple cold boots.
+**Extra Notes** The change is deliberately minimal (deferred-first-access) rather than a full boot API redesign; the architectural split is tracked separately but the immediate crash vector is closed by these edits.
+
+---
+
+## StartEngine Responsibilities Split (minimal hardening)
+RESOLVED in - 29.04.26
+**Location:** `src/WolfEngine/WolfEngine.cpp` — `StartEngine()` / `initializeSubsystems()`
+**What it did:** `StartEngine()` mixed low-level hardware bring-up (I2C, display) with runtime subsystem initialization (input, camera, UI, modules). That coupling made startup ordering fragile and obscured which steps must happen before the engine can safely run frames.
+**Resolution:** Implemented a low-risk, behavior-preserving hardening to separate concerns without large refactors:
+- Deferred hardware-dependent device initialization (notably controller expander init) until after renderer and core runtime initialization by moving `m_InputManager.init()` later in the sequence.
+- Left `I2CManager::begin()` in hardware bring-up but ensured a stabilization delay before device use (see I2C entry above).
+- Documented the recommended two-phase public API (`BootHardware()` / `StartRuntime()`) for future refactors; the immediate safety fixes avoid a disruptive large refactor while making startup ordering explicit.
+**Extra Notes** This reduces boot-time coupling and makes future split/refactor lower-risk; a full `BootHardware()`/`StartRuntime()` refactor remains an optional follow-up.
+
+---
+
+## I2C Initialization Hardening — Expander Logging + Follow-ups
+RESOLVED in  - 29.04.26
+**Location:** `src/WolfEngine/InputSystem/WE_Controller.cpp`; `src/WolfEngine/Utilities/WE_I2C.cpp`; `src/WolfEngine/Drivers/EepromDrivers/WE_EEPROM24LC512.hpp`
+**What it did:** The I2C bring-up path left some diagnostic and defensive gaps: callers ignored `m_expander->begin()` return values (silent failures), and the code had API edge-cases such as unguarded zero-length reads. There was also no automatic startup probe to surface missing devices early.
+**Resolution:** Applied targeted correctness and diagnostics improvements from the instability fix plan:
+- `Controller::init()` now captures and logs the `esp_err_t` result from `m_expander->begin()` and emits `WE_LOGI("Controller", "Expander ready at 0x%02X", addr)` on success or an error log on failure.
+- Combined with the I2C stabilization delay and deferred device init, the expander logging makes hardware failures observable at boot instead of silent misoperation.
+- Kept the zero-length read guard and more invasive bus-reset proposals as tracked follow-ups (out of scope for this quick stability pass).
+**Extra Notes** Optional follow-ups: add a guarded `read(len==0)` early-return, add an optional startup `I2CManager::scan()` probe, or implement a conservative bus-recovery pulse if electrical tests require it.
+
+---
 
 ## vTaskDelay Declared in FreeRTOS.h Instead of task.h
 RESOLVED in Phase 4 - 24.04.26

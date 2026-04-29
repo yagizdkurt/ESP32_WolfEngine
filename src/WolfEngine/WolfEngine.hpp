@@ -83,6 +83,11 @@ private:
     void gameTick();
     void Shutdown();
 
+    // Engine initalization steps
+    void initializeDrivers();
+    void initializeSubsystems();
+    void initializeModules();
+
     friend class GameObject;
 };
 

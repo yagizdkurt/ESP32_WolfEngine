@@ -4,19 +4,45 @@
 // ── Lifecycle ──────────────────────────────────────────────
 
     esp_err_t I2CManager::begin() {
-        i2c_config_t cfg = {};
-        cfg.mode             = I2C_MODE_MASTER;
-        cfg.sda_io_num       = PIN_SDA;
-        cfg.scl_io_num       = PIN_SCL;
-        cfg.sda_pullup_en    = GPIO_PULLUP_ENABLE;
-        cfg.scl_pullup_en    = GPIO_PULLUP_ENABLE;
-        cfg.master.clk_speed = FREQ_HZ;
 
-        esp_err_t err = i2c_param_config(PORT, &cfg);
-        if (err != ESP_OK) return err;
+    // 1. Release bus
+    gpio_set_direction((gpio_num_t)PIN_SDA, GPIO_MODE_INPUT_OUTPUT_OD);
+    gpio_set_direction((gpio_num_t)PIN_SCL, GPIO_MODE_INPUT_OUTPUT_OD);
 
-        return i2c_driver_install(PORT, cfg.mode, 0, 0, 0);
+    gpio_set_level((gpio_num_t)PIN_SDA, 1);
+    gpio_set_level((gpio_num_t)PIN_SCL, 1);
+    esp_rom_delay_us(5);
+
+    // 2. Clock out stuck slave state
+    for (int i = 0; i < 9; i++) {
+        gpio_set_level((gpio_num_t)PIN_SCL, 0);
+        esp_rom_delay_us(5);
+        gpio_set_level((gpio_num_t)PIN_SCL, 1);
+        esp_rom_delay_us(5);
     }
+
+    // 3. Force STOP condition
+    gpio_set_level((gpio_num_t)PIN_SDA, 0);
+    esp_rom_delay_us(5);
+    gpio_set_level((gpio_num_t)PIN_SCL, 1);
+    esp_rom_delay_us(5);
+    gpio_set_level((gpio_num_t)PIN_SDA, 1);
+    esp_rom_delay_us(5);
+
+    // 4. Now safe to configure driver
+    i2c_config_t cfg = {};
+    cfg.mode             = I2C_MODE_MASTER;
+    cfg.sda_io_num       = PIN_SDA;
+    cfg.scl_io_num       = PIN_SCL;
+    cfg.sda_pullup_en    = GPIO_PULLUP_ENABLE;
+    cfg.scl_pullup_en    = GPIO_PULLUP_ENABLE;
+    cfg.master.clk_speed = FREQ_HZ;
+
+    esp_err_t err = i2c_param_config(PORT, &cfg);
+    if (err != ESP_OK) return err;
+
+    return i2c_driver_install(PORT, cfg.mode, 0, 0, 0);
+}
 
     void I2CManager::end() { i2c_driver_delete(PORT); }
 

@@ -1,6 +1,7 @@
 #include "WolfEngine/InputSystem/WE_Controller.hpp"
 #include "driver/gpio.h"
 #include "esp_timer.h"
+#include "WolfEngine/Utilities/Debug/WE_Debug.hpp"
 #include <new>
 
 // ─────────────────────────────────────────────────────────────
@@ -50,7 +51,14 @@ void Controller::init(const ControllerSettings& settings, adc_oneshot_unit_handl
                 break;
         }
 
-        if (m_expander) m_expander->begin();
+        if (m_expander) {
+            esp_err_t expanderErr = m_expander->begin();
+            if (expanderErr != ESP_OK)
+                WE_LOGE("Controller", "Expander begin() failed (addr=0x%02X): %s",
+                        (uint8_t)m_settings->expander.addr, esp_err_to_name(expanderErr));
+            else
+                WE_LOGI("Controller", "Expander ready at 0x%02X", (uint8_t)m_settings->expander.addr);
+        }
     }
 
     // ── Debounce timestamps ───────────────────────────────────

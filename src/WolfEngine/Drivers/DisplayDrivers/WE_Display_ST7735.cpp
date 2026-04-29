@@ -17,19 +17,6 @@ static const char *TAG = "ST7735";
 #define ST7735_PARAM_BITS       (8)
 #define ST7735_BITS_PER_PIXEL   (16)
 
-// ─────────────────────────────────────────────────────────────
-//  Flush completion semaphore
-//  Given by flushDoneCallback when DMA transfer completes.
-//  Taken by flush() before sending the buffer.
-// ─────────────────────────────────────────────────────────────
-static SemaphoreHandle_t s_flushSem = nullptr;
-
-static bool flushDoneCallback(esp_lcd_panel_io_handle_t, esp_lcd_panel_io_event_data_t*, void*) {
-    BaseType_t woken = pdFALSE;
-    xSemaphoreGiveFromISR(s_flushSem, &woken);
-    return woken == pdTRUE;
-}
-
 class ST7735Driver : public DisplayDriver {
 public:
     ST7735Driver() {
@@ -48,8 +35,9 @@ public:
         esp_lcd_panel_dev_config_t panel_cfg = {};
 
         // --- Semaphore ---
-        s_flushSem = xSemaphoreCreateBinary();
-        xSemaphoreGive(s_flushSem); // start as available
+        m_flushSem = xSemaphoreCreateBinary();
+        if (!m_flushSem) { WE_LOGE(TAG, "Failed to create flush semaphore"); goto err_gpio; }
+        xSemaphoreGive(m_flushSem); // start as available
 
         // --- GPIO ---
         io_conf.pin_bit_mask = (1ULL << Settings.hardware.display.dc) | (1ULL << Settings.hardware.display.rst);
@@ -79,7 +67,7 @@ public:
         io_cfg.spi_mode            = 0;
         io_cfg.trans_queue_depth   = ST7735_SPI_QUEUE_DEPTH;
         io_cfg.on_color_trans_done = flushDoneCallback;
-        io_cfg.user_ctx            = nullptr;
+        io_cfg.user_ctx            = this;
         ret = esp_lcd_new_panel_io_spi((esp_lcd_spi_bus_handle_t)SPI2_HOST, &io_cfg, &m_io);
         if (ret != ESP_OK) { WE_LOGE(TAG, "Panel IO init failed: %s", esp_err_to_name(ret)); goto err_panel_io; }
 
@@ -124,6 +112,7 @@ public:
             spi_bus_free(SPI2_HOST);
         err_spi_bus:
         err_gpio:
+            if (m_flushSem) { vSemaphoreDelete(m_flushSem); m_flushSem = nullptr; }
             return;
     }
 
@@ -131,12 +120,28 @@ public:
         if (!m_initialized) { WE_LOGE(TAG, "Flush called before initialization"); return; }
         if (!framebuffer)   { WE_LOGE(TAG, "Framebuffer is NULL"); return; }
 
-        xSemaphoreTake(s_flushSem, portMAX_DELAY);
+        // Wait for the previous DMA transfer to complete before starting a new one.
+        // A finite timeout guards against a permanent freeze if the DMA callback never
+        // fires (e.g. esp_lcd_panel_io_tx_color silently fails to enqueue the transfer
+        // inside draw_bitmap, which returns ESP_OK regardless).
+        if (xSemaphoreTake(m_flushSem, pdMS_TO_TICKS(1000)) != pdTRUE) {
+            WE_LOGE(TAG, "flush semaphore timeout — DMA stalled, skipping frame");
+            return;
+        }
+        if (x1 < 0) x1 = 0;
+        if (y1 < 0) y1 = 0;
+        if (x2 > screenWidth)  x2 = screenWidth;
+        if (y2 > screenHeight) y2 = screenHeight;
+        if (x1 >= x2 || y1 >= y2) {
+            WE_LOGE(TAG, "flush: degenerate rect [%d,%d,%d,%d], skipping", x1, y1, x2, y2);
+            xSemaphoreGive(m_flushSem);
+            return;
+        }
         uint16_t* buf = const_cast<uint16_t*>(framebuffer) + y1 * screenWidth + x1;
         esp_err_t ret = esp_lcd_panel_draw_bitmap(m_panel, x1, y1, x2, y2, buf);
-        if (ret != ESP_OK) { 
-            WE_LOGE(TAG, "draw_bitmap failed: %s", esp_err_to_name(ret)); 
-            xSemaphoreGive(s_flushSem); // Ensure semaphore is released on failure
+        if (ret != ESP_OK) {
+            WE_LOGE(TAG, "draw_bitmap failed: %s", esp_err_to_name(ret));
+            xSemaphoreGive(m_flushSem);
             return;
         }
     }
@@ -153,14 +158,29 @@ public:
     ~ST7735Driver() {
         if (m_panel)    { esp_lcd_panel_del(m_panel); }
         if (m_io)       { esp_lcd_panel_io_del(m_io); spi_bus_free(SPI2_HOST); }
-        if (s_flushSem) { vSemaphoreDelete(s_flushSem); }
+        if (m_flushSem) { vSemaphoreDelete(m_flushSem); m_flushSem = nullptr; }
     }
+
+    // ─────────────────────────────────────────────────────────────
+    //  Flush completion callback (static member — accesses instance
+    //  via user_ctx = this, standard ESP-IDF pattern).
+    // ─────────────────────────────────────────────────────────────
+    static bool flushDoneCallback(esp_lcd_panel_io_handle_t, esp_lcd_panel_io_event_data_t*, void* user_ctx);
 
 private:
     esp_lcd_panel_handle_t    m_panel       = NULL;
     esp_lcd_panel_io_handle_t m_io          = NULL;
+    SemaphoreHandle_t         m_flushSem    = nullptr;
     bool                      m_initialized = false;
 };
+
+bool ST7735Driver::flushDoneCallback(esp_lcd_panel_io_handle_t, esp_lcd_panel_io_event_data_t*, void* user_ctx) {
+    auto* self = static_cast<ST7735Driver*>(user_ctx);
+    if (!self->m_flushSem) return false;
+    BaseType_t woken = pdFALSE;
+    xSemaphoreGiveFromISR(self->m_flushSem, &woken);
+    return woken == pdTRUE;
+}
 
 DisplayDriver* GetDriver() {
     static ST7735Driver instance;
