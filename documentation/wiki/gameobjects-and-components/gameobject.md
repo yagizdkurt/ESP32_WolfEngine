@@ -104,7 +104,9 @@ Example:
 class Player : public GameObject {
 public:
     SpriteRenderer spriteRenderer = SpriteRenderer(this, &SPRITE_PLAYER, RenderLayer::Player);
-    Animator       animator       = Animator(&spriteRenderer, WALK_FRAMES, 4);
+    // Wrap the generated raw animation asset with playback params and pass to Animator
+    constexpr WE_Animation WALK = { &Assets::PLAYER_WALK, 4, true };
+    Animator       animator       = Animator(&spriteRenderer, &WALK);
 };
 ```
 

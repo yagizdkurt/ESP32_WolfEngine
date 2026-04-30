@@ -48,6 +48,7 @@ For authoritative details on sprite/palette generation, build integration, and c
 - CMake and PlatformIO build wiring
 - Directory layout and file formats
 - Python version requirements
+ - GIF → animation conversion (`tools/asset_converter.py`) — emits `WE_AnimationRaw` assets; runtime `WE_Animation` wrappers hold playback params
 
 ---
 

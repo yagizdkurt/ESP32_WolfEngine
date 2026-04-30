@@ -38,6 +38,10 @@ Sprite and palette asset generation is handled by an automated build-time pipeli
 - **Sprite conversion:** `tools/asset_converter.py` reads PNG files and outputs sprite definitions.
 - Both stages run automatically before compilation on CMake and PlatformIO builds.
 - Generated files go to `src/GeneratedAssets/` and are re-created every build.
+ - **Sprite conversion:** `tools/asset_converter.py` reads PNG files and outputs sprite definitions.
+ - **GIF animation conversion:** `tools/asset_converter.py` also converts GIFs into `WE_AnimationRaw` assets (deduplicated frames + sequence). Runtime code wraps `WE_AnimationRaw` into a `WE_Animation` playback object with `frameDuration` and `looping`.
+ - All stages run automatically before compilation on CMake and PlatformIO builds.
+ - Generated files go to `src/GeneratedAssets/` and are re-created every build.
 
 For workflow, configuration format, error messages, and Python requirements, refer to the authoritative `asset_pipeline.md`.
 
