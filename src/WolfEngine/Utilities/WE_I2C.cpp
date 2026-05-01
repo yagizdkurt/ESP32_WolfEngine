@@ -97,6 +97,12 @@ i2c_master_dev_handle_t I2CManager::addDevice(uint8_t addr) {
     return handle;
 }
 
+// ── Retry helper ──────────────────────────────────────────
+
+bool I2CManager::isRetryable(esp_err_t err) {
+    return err == ESP_ERR_TIMEOUT || err == ESP_FAIL;
+}
+
 // ── Low-level primitives ───────────────────────────────────
 
 esp_err_t I2CManager::write(i2c_master_dev_handle_t dev, const uint8_t* data, size_t len) {
@@ -105,7 +111,13 @@ esp_err_t I2CManager::write(i2c_master_dev_handle_t dev, const uint8_t* data, si
 #if WE_I2C_DEBUG_VERBOSE
     WE_LOGI("I2C", "write  len=%u", (unsigned)len);
 #endif
-    esp_err_t err = i2c_master_transmit(dev, data, len, TIMEOUT_MS);
+    esp_err_t err = ESP_FAIL;
+    for (int attempt = 0; attempt < MAX_RETRIES; ++attempt) {
+        err = i2c_master_transmit(dev, data, len, TIMEOUT_MS);
+        if (err == ESP_OK || !isRetryable(err)) break;
+        if (attempt + 1 < MAX_RETRIES)
+            vTaskDelay(pdMS_TO_TICKS((1 << attempt) * BACKOFF_BASE_MS));
+    }
     xSemaphoreGive(s_busMutex);
     if (err != ESP_OK)
         WE_LOGE("I2C", "write len=%u FAILED: %s", (unsigned)len, esp_err_to_name(err));
@@ -118,7 +130,13 @@ esp_err_t I2CManager::read(i2c_master_dev_handle_t dev, uint8_t* data, size_t le
 #if WE_I2C_DEBUG_VERBOSE
     WE_LOGI("I2C", "read   len=%u", (unsigned)len);
 #endif
-    esp_err_t err = i2c_master_receive(dev, data, len, TIMEOUT_MS);
+    esp_err_t err = ESP_FAIL;
+    for (int attempt = 0; attempt < MAX_RETRIES; ++attempt) {
+        err = i2c_master_receive(dev, data, len, TIMEOUT_MS);
+        if (err == ESP_OK || !isRetryable(err)) break;
+        if (attempt + 1 < MAX_RETRIES)
+            vTaskDelay(pdMS_TO_TICKS((1 << attempt) * BACKOFF_BASE_MS));
+    }
     xSemaphoreGive(s_busMutex);
     if (err != ESP_OK)
         WE_LOGE("I2C", "read  len=%u FAILED: %s", (unsigned)len, esp_err_to_name(err));
@@ -142,7 +160,13 @@ esp_err_t I2CManager::writeReg(i2c_master_dev_handle_t dev, uint8_t reg,
 #if WE_I2C_DEBUG_VERBOSE
     WE_LOGI("I2C", "writeReg reg=0x%02X len=%u", reg, (unsigned)len);
 #endif
-    esp_err_t err = i2c_master_transmit(dev, buf, len + 1, TIMEOUT_MS);
+    esp_err_t err = ESP_FAIL;
+    for (int attempt = 0; attempt < MAX_RETRIES; ++attempt) {
+        err = i2c_master_transmit(dev, buf, len + 1, TIMEOUT_MS);
+        if (err == ESP_OK || !isRetryable(err)) break;
+        if (attempt + 1 < MAX_RETRIES)
+            vTaskDelay(pdMS_TO_TICKS((1 << attempt) * BACKOFF_BASE_MS));
+    }
     xSemaphoreGive(s_busMutex);
     if (err != ESP_OK)
         WE_LOGE("I2C", "writeReg reg=0x%02X len=%u FAILED: %s", reg, (unsigned)len, esp_err_to_name(err));
@@ -156,7 +180,13 @@ esp_err_t I2CManager::readReg(i2c_master_dev_handle_t dev, uint8_t reg,
 #if WE_I2C_DEBUG_VERBOSE
     WE_LOGI("I2C", "readReg  reg=0x%02X len=%u", reg, (unsigned)len);
 #endif
-    esp_err_t err = i2c_master_transmit_receive(dev, &reg, 1, data, len, TIMEOUT_MS);
+    esp_err_t err = ESP_FAIL;
+    for (int attempt = 0; attempt < MAX_RETRIES; ++attempt) {
+        err = i2c_master_transmit_receive(dev, &reg, 1, data, len, TIMEOUT_MS);
+        if (err == ESP_OK || !isRetryable(err)) break;
+        if (attempt + 1 < MAX_RETRIES)
+            vTaskDelay(pdMS_TO_TICKS((1 << attempt) * BACKOFF_BASE_MS));
+    }
     xSemaphoreGive(s_busMutex);
     if (err != ESP_OK)
         WE_LOGE("I2C", "readReg  reg=0x%02X len=%u FAILED: %s", reg, (unsigned)len, esp_err_to_name(err));
@@ -171,7 +201,13 @@ esp_err_t I2CManager::transmitReceive(i2c_master_dev_handle_t dev,
 #if WE_I2C_DEBUG_VERBOSE
     WE_LOGI("I2C", "transmitReceive tx=%u rx=%u", (unsigned)tx_len, (unsigned)rx_len);
 #endif
-    esp_err_t err = i2c_master_transmit_receive(dev, tx, tx_len, rx, rx_len, TIMEOUT_MS);
+    esp_err_t err = ESP_FAIL;
+    for (int attempt = 0; attempt < MAX_RETRIES; ++attempt) {
+        err = i2c_master_transmit_receive(dev, tx, tx_len, rx, rx_len, TIMEOUT_MS);
+        if (err == ESP_OK || !isRetryable(err)) break;
+        if (attempt + 1 < MAX_RETRIES)
+            vTaskDelay(pdMS_TO_TICKS((1 << attempt) * BACKOFF_BASE_MS));
+    }
     xSemaphoreGive(s_busMutex);
     if (err != ESP_OK)
         WE_LOGE("I2C", "transmitReceive tx=%u rx=%u FAILED: %s",
@@ -184,7 +220,13 @@ esp_err_t I2CManager::transmitReceive(i2c_master_dev_handle_t dev,
 esp_err_t I2CManager::probe(uint8_t addr) {
     if (xSemaphoreTake(s_busMutex, pdMS_TO_TICKS(MUTEX_TIMEOUT_MS)) != pdTRUE)
         return ESP_ERR_TIMEOUT;
-    esp_err_t err = i2c_master_probe(s_busHandle, addr, TIMEOUT_MS);
+    esp_err_t err = ESP_FAIL;
+    for (int attempt = 0; attempt < MAX_RETRIES; ++attempt) {
+        err = i2c_master_probe(s_busHandle, addr, TIMEOUT_MS);
+        if (err == ESP_OK || !isRetryable(err)) break;
+        if (attempt + 1 < MAX_RETRIES)
+            vTaskDelay(pdMS_TO_TICKS((1 << attempt) * BACKOFF_BASE_MS));
+    }
     xSemaphoreGive(s_busMutex);
     return err;
 }

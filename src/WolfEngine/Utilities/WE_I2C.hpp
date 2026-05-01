@@ -2,6 +2,7 @@
 #include <driver/i2c_master.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include "freertos/task.h"
 #include "WolfEngine/Settings/WE_Settings.hpp"
 
 // ─────────────────────────────────────────────────────────────
@@ -31,6 +32,11 @@ public:
     // Timeout waiting to acquire the bus mutex. Must be greater than TIMEOUT_MS
     // so a task already holding the lock can always complete its transaction first.
     static constexpr int        MUTEX_TIMEOUT_MS = 100;
+
+    // Maximum attempts per transaction before returning the final error.
+    static constexpr int        MAX_RETRIES     = 3;
+    // Base delay between retry attempts in ms; doubles each attempt (exponential backoff).
+    static constexpr int        BACKOFF_BASE_MS = 1;
 
     // Register a device at the given 7-bit address at FREQ_HZ speed.
     // Call once per device in its begin() before any transactions.
@@ -78,6 +84,7 @@ private:
     friend class WolfEngine;
     static esp_err_t begin();
     static void end();
+    static bool isRetryable(esp_err_t err);
     static i2c_master_bus_handle_t s_busHandle;
     static SemaphoreHandle_t       s_busMutex;
     I2CManager() = delete;
