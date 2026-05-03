@@ -89,32 +89,32 @@ void WolfEngine::gameTick() {
     m_InputManager.tick(); // Update input states first
 
     for (GameObject* obj : m_GameObjectRegistry.gameObjects) // EarlyUpdate for game objects before main logic
-        if (obj && obj->isUpdatable() && (obj->m_updateLayer & Flow().activeMask())) obj->EarlyUpdate();
+        if (obj && (Flow().isLayerActive(obj->m_updateLayer) && obj->isUpdatable())) obj->EarlyUpdate();
 
     for (GameObject* obj : m_GameObjectRegistry.gameObjects) // Early tick for components before game logic
-        if (obj && obj->isUpdatable() && (obj->m_updateLayer & Flow().activeMask())) obj->earlyComponentTick();
+        if (obj && (Flow().isLayerActive(obj->m_updateLayer) && obj->isUpdatable())) obj->earlyComponentTick();
 
     ModuleSystem::EarlyUpdate(); // Early update for modules before game logic
 
     // ---- Main Phase ----
     for (GameObject* obj : m_GameObjectRegistry.gameObjects) // Main update for game objects
-        if (obj && obj->isUpdatable() && (obj->m_updateLayer & Flow().activeMask())) obj->Update();
+        if (obj && (Flow().isLayerActive(obj->m_updateLayer) && obj->isUpdatable())) obj->Update();
 
     for (GameObject* obj : m_GameObjectRegistry.gameObjects) // Main tick for components
-        if (obj && obj->isUpdatable() && (obj->m_updateLayer & Flow().activeMask())) obj->componentTick();
+        if (obj && (Flow().isLayerActive(obj->m_updateLayer) && obj->isUpdatable())) obj->componentTick();
 
     ModuleSystem::Update(); // Main update for modules after game logic
 
     // ---- Late Phase ----
     for (GameObject* obj : m_GameObjectRegistry.gameObjects) // LateUpdate for game objects after main logic
-        if (obj && obj->isUpdatable() && (obj->m_updateLayer & Flow().activeMask())) obj->LateUpdate();
+        if (obj && (Flow().isLayerActive(obj->m_updateLayer) && obj->isUpdatable())) obj->LateUpdate();
 
     for (GameObject* obj : m_GameObjectRegistry.gameObjects) // Late tick for components after main logic
-        if (obj && obj->isUpdatable() && (obj->m_updateLayer & Flow().activeMask())) obj->lateComponentTick();
+        if (obj && (Flow().isLayerActive(obj->m_updateLayer) && obj->isUpdatable())) obj->lateComponentTick();
 
     ModuleSystem::LateUpdate(); // Late update for modules after game logic
 
-    m_Camera.followTick(); // Update camera after game logic so follow targets are at their new position
+    if (Flow().isLayerActive(UL_UPDATE_GAMEPLAY)) m_Camera.followTick(); // Update camera after game logic so follow targets are at their new position
 
     // ---- End Phase ----
     for (GameObject* obj : m_GameObjectRegistry.gameObjects) // PreRender tick for components before rendering
