@@ -13,10 +13,7 @@ void Renderer::initialize() {
     WE_ASSERT(m_driver->screenWidth  == Settings.render.screenWidth &&
               m_driver->screenHeight == Settings.render.screenHeight,
               "Driver dimensions do not match Settings.render screen size");
-
-#if WE_DUAL_CORE_RENDER
     initDualCore();
-#endif
 }
 
 

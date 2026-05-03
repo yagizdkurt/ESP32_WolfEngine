@@ -174,16 +174,32 @@ inline constexpr EngineConfig Settings = {
         // Maximum children per UIPanel.
         .maxPanelChildren = 10,
         .maxPaletteInexes = 32,
+        .maxFlowStackDepth = 8,
     },
 
     // ── Debug ────────────────────────────────────────────────────────────────
     .debug = {},
+
+    // ── Game Flow ────────────────────────────────────────────────────────────
+    .gameFlow = {
+        .masks = {
+            .running  = UL_UPDATE_GAMEPLAY | UL_UPDATE_PHYSICS | UL_UPDATE_AI | UL_UPDATE_UI | UL_UPDATE_INPUT,
+            .dialogue = UL_UPDATE_UI | UL_UPDATE_INPUT,
+            .menu     = UL_UPDATE_UI | UL_UPDATE_INPUT,
+            .cutscene = UL_UPDATE_UI,
+            .custom1  = 0,
+            .custom2  = 0,
+            .custom3  = 0,
+            .custom4  = 0,
+        },
+    },
 };
 
 // ── Validation ───────────────────────────────────────────────────────────────
 static_assert(Settings.limits.maxGameObjects > 0,"maxGameObjects must be > 0");
 static_assert(Settings.limits.maxUIElements > 0, "maxUIElements must be > 0");
 static_assert(Settings.limits.maxPanelChildren > 0,"maxPanelChildren must be > 0");
+static_assert(Settings.limits.maxFlowStackDepth > 0, "maxFlowStackDepth must be > 0");
 static_assert(Settings.render.maxDrawCommands  > 0,  "maxDrawCommands must be > 0");
 static_assert(Settings.render.targetFrameTimeUs > 0, "targetFrameTimeUs must be > 0");
 static_assert(Settings.input.buttonCount == kButtonCount,

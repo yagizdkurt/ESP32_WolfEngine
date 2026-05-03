@@ -17,23 +17,25 @@ public:
 
     // Initialize the chip — drives all 16 pins high for input mode.
     esp_err_t begin() override {
+        _handle = I2CManager::addDevice(_addr);
+        if (!_handle) return ESP_ERR_NOT_FOUND;
         return write(0xFFFF);
     }
 
     // Write all 16 pins at once
     esp_err_t write(uint16_t pins) {
         _state = pins;
-        uint8_t buf[2] = { 
+        uint8_t buf[2] = {
             static_cast<uint8_t>(_state & 0xFF),         // low byte  P0–P7
             static_cast<uint8_t>((_state >> 8) & 0xFF)  // high byte P8–P15
         };
-        return I2CManager::write(_addr, buf, 2);
+        return I2CManager::write(_handle, buf, 2);
     }
 
     // Read all 16 pins
     esp_err_t read(uint16_t& pins) {
         uint8_t buf[2] = {};
-        esp_err_t err = I2CManager::read(_addr, buf, 2);
+        esp_err_t err = I2CManager::read(_handle, buf, 2);
         if (err != ESP_OK) return err;
         pins = buf[0] | (buf[1] << 8);
         return ESP_OK;
@@ -69,6 +71,7 @@ public:
     uint16_t cachedState() const { return _state; }
 
 private:
-    uint8_t  _addr;
-    uint16_t _state; // 16-bit shadow register
+    uint8_t                 _addr;
+    uint16_t                _state;
+    i2c_master_dev_handle_t _handle = nullptr;
 };

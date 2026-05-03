@@ -13,19 +13,10 @@ void WolfEngine::Shutdown() {
 }
 
 // =================== Initialization Steps ===================
-// These are called in sequence from StartGame() to set up the engine before the main loop starts.
 void WolfEngine::StartEngine() {
-    // Driver initialization
-    initializeDrivers();
-
-    // Engine CORE subsystem initialization
-    initializeSubsystems();
-
-    // Module initialization
-    initializeModules();
-
-    // default UI state: no registered elements
-    UI().clearElements();
+    initializeDrivers();    // Driver initialization
+    initializeSubsystems(); // Engine CORE subsystem initialization
+    initializeModules();    // Module initialization
 }
 
 void WolfEngine::initializeDrivers() {
@@ -45,7 +36,8 @@ void WolfEngine::initializeSubsystems() {
     m_Camera.initialize();
     m_UIManager.initialize(m_renderer.m_framebuffer);
     m_SoundManager.Initialize();
-    m_InputManager.init(); // deferred: PCF8574 write after I2C bus has settled
+    m_InputManager.init();
+    m_flowManager.init();
     WE_LOGI("Boot", "Subsystems ready");
 }
 
@@ -95,25 +87,42 @@ void WolfEngine::gameTick() {
 
     // ---- Early Phase ----
     m_InputManager.tick(); // Update input states first
-    for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj && obj->isUpdatable()) obj->EarlyUpdate(); // EarlyUpdate for game objects before main logic
-    for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj && obj->isUpdatable()) obj->earlyComponentTick(); // Early tick for components before game logic
+
+    for (GameObject* obj : m_GameObjectRegistry.gameObjects) // EarlyUpdate for game objects before main logic
+        if (obj && (Flow().isLayerActive(obj->m_updateLayer) && obj->isUpdatable())) obj->EarlyUpdate();
+
+    for (GameObject* obj : m_GameObjectRegistry.gameObjects) // Early tick for components before game logic
+        if (obj && (Flow().isLayerActive(obj->m_updateLayer) && obj->isUpdatable())) obj->earlyComponentTick();
+
     ModuleSystem::EarlyUpdate(); // Early update for modules before game logic
 
     // ---- Main Phase ----
-    for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj && obj->isUpdatable()) obj->Update(); // Main update for game objects
-    for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj && obj->isUpdatable()) obj->componentTick(); // Main tick for components
+    for (GameObject* obj : m_GameObjectRegistry.gameObjects) // Main update for game objects
+        if (obj && (Flow().isLayerActive(obj->m_updateLayer) && obj->isUpdatable())) obj->Update();
+
+    for (GameObject* obj : m_GameObjectRegistry.gameObjects) // Main tick for components
+        if (obj && (Flow().isLayerActive(obj->m_updateLayer) && obj->isUpdatable())) obj->componentTick();
+
     ModuleSystem::Update(); // Main update for modules after game logic
 
     // ---- Late Phase ----
-    for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj && obj->isUpdatable()) obj->LateUpdate(); // LateUpdate for game objects after main logic
-    for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj && obj->isUpdatable()) obj->lateComponentTick(); // Late tick for components after main logic
+    for (GameObject* obj : m_GameObjectRegistry.gameObjects) // LateUpdate for game objects after main logic
+        if (obj && (Flow().isLayerActive(obj->m_updateLayer) && obj->isUpdatable())) obj->LateUpdate();
+
+    for (GameObject* obj : m_GameObjectRegistry.gameObjects) // Late tick for components after main logic
+        if (obj && (Flow().isLayerActive(obj->m_updateLayer) && obj->isUpdatable())) obj->lateComponentTick();
+
     ModuleSystem::LateUpdate(); // Late update for modules after game logic
-    m_Camera.followTick(); // Update camera after game logic so follow targets are at their new position
+
+    if (Flow().isLayerActive(UL_UPDATE_GAMEPLAY)) m_Camera.followTick(); // Update camera after game logic so follow targets are at their new position
 
     // ---- End Phase ----
-    for (GameObject* obj : m_GameObjectRegistry.gameObjects) if (obj && obj->isUpdatable()) obj->preRenderComponentTick(); // PreRender tick for components before rendering
+    for (GameObject* obj : m_GameObjectRegistry.gameObjects) // PreRender tick for components before rendering
+        if (obj && obj->isUpdatable()) obj->preRenderComponentTick();
+
     ModuleSystem::PreRender(); // PreRender for modules before rendering
 
+    // Rendering Starts here — diagnostics measured separately to exclude module PreRender time
     auto renderStart = WE_DiagBegin();
     m_engineDiag.updatePhaseUs = WE_DiagElapsedUs(tickStart);
 
@@ -122,8 +131,7 @@ void WolfEngine::gameTick() {
     m_engineDiag.renderPhaseUs = WE_DiagElapsedUs(renderStart);
     m_engineDiag.frameTotalUs  = WE_DiagElapsedUs(tickStart);
 
-    uint32_t fpsElapsed = static_cast<uint32_t>(
-        esp_timer_get_time() - m_fpsWindowStart);
+    uint32_t fpsElapsed = static_cast<uint32_t>(esp_timer_get_time() - m_fpsWindowStart);
     m_fpsFrameCount++;
     if (fpsElapsed >= 1000000u) {
         m_engineDiag.fpsAvg1s = static_cast<uint16_t>(

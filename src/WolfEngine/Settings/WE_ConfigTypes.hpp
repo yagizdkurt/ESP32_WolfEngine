@@ -2,33 +2,8 @@
 #include <stdint.h>
 #include "esp_adc/adc_oneshot.h"
 #include "WolfEngine/Drivers/IODrivers/WE_ExpanderDrivers.hpp"
+#include "WE_Layers.hpp"
 // kButtonCount is defined in WE_ExpanderDrivers.hpp — available here via the include above.
-
-// =============================================================
-//  Render layers
-// =============================================================
-enum class RenderLayer : uint8_t {
-    Default    = 2,
-    DEFAULT    = 2,
-    BackGround = 0,
-    World      = 1,
-    Entities   = 2,
-    Player     = 3,
-    FX         = 4,
-    MAX_LAYERS
-};
-
-// =============================================================
-//  Collision layers (bitmask)
-// =============================================================
-enum class CollisionLayer : uint16_t {
-    DEFAULT    = 1 << 0,
-    Player     = 1 << 1,
-    Enemy      = 1 << 2,
-    Wall       = 1 << 3,
-    Trigger    = 1 << 4,
-    Projectile = 1 << 5
-};
 
 // =============================================================
 //  Display target selector
@@ -50,6 +25,22 @@ struct ControllerSettings {
     int           joyYMin, joyYMax, joyYCenter;
     float         joyDeadzone;
     bool          activeLow;
+};
+
+// =============================================================
+//  Game flow states and masks
+// =============================================================
+enum class GameFlowState : uint8_t {Running, Dialogue, Menu, Cutscene, Custom1, Custom2, Custom3, Custom4 };
+
+struct GameFlowMasksConfig {
+    uint16_t running;
+    uint16_t dialogue;
+    uint16_t menu;
+    uint16_t cutscene;
+    uint16_t custom1;
+    uint16_t custom2;
+    uint16_t custom3;
+    uint16_t custom4;
 };
 
 // =============================================================
@@ -97,10 +88,15 @@ struct LimitsConfig {
     uint8_t maxUIElements;
     uint8_t maxPanelChildren;
     uint8_t maxPaletteInexes;
+    uint8_t maxFlowStackDepth;
 };
 
 struct DebugConfig {
     // reserved for future log-level / category flags
+};
+
+struct GameFlowConfig {
+    GameFlowMasksConfig masks;
 };
 
 // =============================================================
@@ -114,4 +110,5 @@ struct EngineConfig {
     InputConfig    input;
     LimitsConfig   limits;
     DebugConfig    debug;
+    GameFlowConfig gameFlow;
 };

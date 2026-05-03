@@ -18,6 +18,7 @@
 #include "WolfEngine/InputSystem/WE_InputManager.hpp"
 #include "WolfEngine/Sound/WE_SoundManager.hpp"
 #include "WolfEngine/InputSystem/WE_InputManager.hpp"
+#include "WolfEngine/GameFlow/WE_GameFlowManager.hpp"
 
 // ======= Component System ========
 #include "WolfEngine/ComponentSystem/Components/WE_Components.hpp"
@@ -64,6 +65,7 @@ public:
     InputManager m_InputManager;
     UIManager m_UIManager;
     SoundManager m_SoundManager;
+    GameFlowManager m_flowManager;
 
 private:
     std::atomic<bool> m_isRunning{false};
@@ -101,3 +103,4 @@ inline InputManager& Input()                { return WolfEngine::getInstance().m
 inline UIManager& UI()                      { return WolfEngine::getInstance().m_UIManager; }
 inline SoundManager& Sound()                { return WolfEngine::getInstance().m_SoundManager; }
 inline Renderer& RenderSys()                { return WolfEngine::getInstance().m_renderer; }
+inline GameFlowManager& Flow()              { return WolfEngine::getInstance().m_flowManager; }

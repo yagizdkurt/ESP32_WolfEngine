@@ -16,17 +16,20 @@ public:
 
     // Initialize — set all pins as inputs with pull-ups enabled
     esp_err_t begin() override {
+        _handle = I2CManager::addDevice(_addr);
+        if (!_handle) return ESP_ERR_NOT_FOUND;
+
         // Set all pins as inputs
         uint8_t allInputs = 0xFF;
-        esp_err_t err = I2CManager::writeReg(_addr, REG_IODIRA, &allInputs, 1);
+        esp_err_t err = I2CManager::writeReg(_handle, REG_IODIRA, &allInputs, 1);
         if (err != ESP_OK) return err;
-        err = I2CManager::writeReg(_addr, REG_IODIRB, &allInputs, 1);
+        err = I2CManager::writeReg(_handle, REG_IODIRB, &allInputs, 1);
         if (err != ESP_OK) return err;
 
         // Enable pull-ups on all pins
-        err = I2CManager::writeReg(_addr, REG_GPPUA, &allInputs, 1);
+        err = I2CManager::writeReg(_handle, REG_GPPUA, &allInputs, 1);
         if (err != ESP_OK) return err;
-        err = I2CManager::writeReg(_addr, REG_GPPUB, &allInputs, 1);
+        err = I2CManager::writeReg(_handle, REG_GPPUB, &allInputs, 1);
         if (err != ESP_OK) return err;
 
         return ESP_OK;
@@ -37,7 +40,7 @@ public:
         uint8_t reg  = (pin < 8) ? REG_GPIOA : REG_GPIOB;
         uint8_t bit  = (pin < 8) ? pin : (pin - 8);
         uint8_t val  = 0;
-        esp_err_t err = I2CManager::readReg(_addr, reg, &val, 1);
+        esp_err_t err = I2CManager::readReg(_handle, reg, &val, 1);
         if (err != ESP_OK) return -1;
         return (val >> bit) & 1;
     }
@@ -45,16 +48,17 @@ public:
     // Read all 16 pins at once
     esp_err_t read(uint16_t& pins) {
         uint8_t portA = 0, portB = 0;
-        esp_err_t err = I2CManager::readReg(_addr, REG_GPIOA, &portA, 1);
+        esp_err_t err = I2CManager::readReg(_handle, REG_GPIOA, &portA, 1);
         if (err != ESP_OK) return err;
-        err = I2CManager::readReg(_addr, REG_GPIOB, &portB, 1);
+        err = I2CManager::readReg(_handle, REG_GPIOB, &portB, 1);
         if (err != ESP_OK) return err;
         pins = portA | (portB << 8);
         return ESP_OK;
     }
 
 private:
-    uint8_t _addr;
+    uint8_t                 _addr;
+    i2c_master_dev_handle_t _handle = nullptr;
 
     // Register addresses
     static constexpr uint8_t REG_IODIRA = 0x00; // Direction port A

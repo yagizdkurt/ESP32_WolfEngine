@@ -13,6 +13,9 @@
 
 class WE_IEEPROMDriver {
 public:
+    // Register the device on the I2C bus. Call once after I2CManager::begin().
+    virtual esp_err_t begin() { return ESP_OK; }
+
     // Write len bytes from buf to the chip starting at addr.
     // Implementations must handle page-boundary splits internally.
     // Blocks until the write cycle completes (5–20 ms per page).

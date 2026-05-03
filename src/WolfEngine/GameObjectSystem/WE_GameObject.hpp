@@ -61,6 +61,8 @@ public:
     // ---------------------------------------------------------
     bool isActive = true;
 
+    uint16_t m_updateLayer = UL_UPDATE_GAMEPLAY;
+    void setUpdateLayer(uint16_t layer) { m_updateLayer = layer; }
 
     // ---------------------------------------------------------
     //  transform

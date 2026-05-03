@@ -21,6 +21,7 @@ void WE_SaveManager::OnInit() {
             //     break;
         }
         m_eeproms[i] = reinterpret_cast<WE_IEEPROMDriver*>(m_driverBufs[i]);
+        m_eeproms[i]->begin();
         WE_LOGI("SaveManager", "EEPROM[%u] type=%u addr=0x%02X capacity=%lu B",
                  i,
                  static_cast<uint8_t>(WE_SAVE_EEPROMS[i].type),

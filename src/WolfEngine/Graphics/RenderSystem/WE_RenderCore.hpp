@@ -107,6 +107,8 @@ private:
     void renderShutDown();
 #else
     uint16_t m_framebuffer[Settings.render.screenWidth * Settings.render.screenHeight];
+    void renderShutDown(){} //no-op for single-core
+    void initDualCore()  {} //no-op for single-core
 #endif
 
     friend class WolfEngine;

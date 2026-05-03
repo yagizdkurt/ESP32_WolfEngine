@@ -6,36 +6,34 @@
 #include "WolfEngine/Utilities/WE_Timer.hpp"
 #include "WE_BaseComp.hpp"
 
-// =============================================================
-//  WE_Comp_SpriteRenderer.hpp
-//  The SpriteRenderer component submits a DrawCommand to the
-//  renderer each frame during the component-tick phase. It owns
-//  the sprite asset pointer, rotation, and visibility
-//  state for the attached GameObject.
-//
-//  USAGE:
-//      // 1. Define pixel data in flash — 2D array [rows][cols]
-//      constexpr uint8_t playerPixels[7][7] = { ... };
-//
-//      // 2. Create Sprite asset — palette is bundled at creation
-//      constexpr Sprite SPRITE_PLAYER = Sprite::Create(playerPixels, PALETTE_WARM);
-//
-//      // 3. Attach SpriteRenderer to your GameObject
-//      class Player : public GameObject {
-//      public:
-//          SpriteRenderer spriteRenderer = SpriteRenderer(this, &SPRITE_PLAYER, RenderLayer::Player);
-//      };
-// =============================================================
-
+/**
+ * # SpriteRenderer Component
+ *
+ * Submits a DrawCommand to the renderer each frame during the component-tick phase. It owns the sprite asset pointer, rotation, and visibility state for the attached GameObject.
+ *
+ * This component is responsible for rendering sprites associated with a GameObject. It handles sprite rotation, visibility control, palette overrides, and sorting within render layers.
+ *
+ * ### Example Usage:
+ *
+ * ~~~cpp
+ * constexpr uint8_t playerPixels[7][7] = { ... };
+ * constexpr Sprite SPRITE_PLAYER = Sprite::Create(playerPixels, PALETTE_WARM);
+ *
+ * class Player : public GameObject {
+ * public:
+ *     SpriteRenderer spriteRenderer = SpriteRenderer(this, &SPRITE_PLAYER, RenderLayer::Player);
+ * };
+ * ~~~
+ *
+ */
 class SpriteRenderer : public Component {
 public:
     /**
-     * @brief Construct a sprite renderer component for a GameObject.
+     * ## Constructs a sprite renderer component for a GameObject.
      *
-     * The component registers itself on the owner and submits sprite draw commands
-     * during pre-render tick when sprite rendering is enabled.
+     * The component registers itself on the owner and submits sprite draw commands during pre-render tick when sprite rendering is enabled.
      *
-     * @param owner Pointer to the owning GameObject (typically @c this).
+     * @param owner Pointer to the owning GameObject (typically `this`).
      * @param sprite Pointer to a Sprite asset (pixels/palette/anchor metadata).
      * @param layer Render layer used for sorting and draw order.
      */
@@ -43,49 +41,54 @@ public:
                    const Sprite*      sprite,
                    RenderLayer        layer = RenderLayer::Default);
 
-    /** @brief Destroy the component. */
+    /** ## Destroys the component. */
     ~SpriteRenderer() = default;
 
     /**
-     * @brief Set the active sprite asset.
+     * ## Sets the active sprite asset.
+     *
      * @param sprite New sprite pointer. Used by Animator to switch frames.
      */
     void setSprite(const Sprite* sprite)     { m_sprite   = sprite;    }
 
     /**
-     * @brief Enable a runtime palette override.
+     * ## Enables a runtime palette override.
+     *
      * @param palette Pointer to the override palette.
      */
     void setPaletteOverride(const uint16_t* palette);
 
-    /** @brief Disable palette override and fall back to the sprite palette. */
+    /** ## Disables palette override and falls back to the sprite palette. */
     void clearPaletteOverride();
 
-    /** @brief Check whether a palette override is active. */
+    /** ## Checks whether a palette override is active. */
     bool hasPaletteOverride() const { return m_usePaletteOverride; }
 
     /**
-     * @brief Get the currently configured palette override pointer.
-     * @return Override palette pointer, or @c nullptr when no override is set.
+     * ## Gets the currently configured palette override pointer.
+     *
+     * @return Override palette pointer, or `nullptr` when no override is set.
      */
     const uint16_t* getPaletteOverride() const { return m_paletteOverride; }
 
     /**
-     * @brief Apply a timed palette override using seconds.
+     * ## Applies a timed palette override using seconds.
+     *
      * @param seconds Override duration in seconds.
      * @param palette Pointer to the override palette.
      */
     void setPaletteOverrideForSeconds(float seconds, const uint16_t* palette);
 
     /**
-     * @brief Apply a timed palette override using engine ticks.
+     * ## Applies a timed palette override using engine ticks.
+     *
      * @param tickCount Duration expressed in engine ticks.
      * @param palette Pointer to the override palette.
      */
     void setPaletteOverrideForTicks(uint32_t tickCount, const uint16_t* palette);
 
     /**
-     * @brief Set sprite rotation in 90-degree steps.
+     * ## Sets sprite rotation in 90-degree steps.
      *
      * Rotation is applied by the renderer at draw time. Pixel data remains unchanged.
      *
@@ -100,30 +103,32 @@ public:
     void setRotation(Rotation rotation)      { m_rotation = rotation;  }
 
     /**
-     * @brief Show or hide the sprite without detaching the component.
+     * ## Shows or hides the sprite without detaching the component.
+     *
      * @param visible True to render, false to skip submission.
      */
     void setVisible(bool visible)            { m_visible  = visible;   }
 
     /**
-     * @brief Override default within-layer sorting.
+     * ## Overrides default within-layer sorting.
+     *
      * @param key Explicit sort key value used instead of automatic draw Y sort.
      */
     void setSortKey(int16_t key) { m_sortKeyOverride = key; m_useSortKeyOverride = true; }
 
-    /** @brief Clear explicit sort key and restore automatic sorting. */
+    /** ## Clears explicit sort key and restores automatic sorting. */
     void clearSortKey()          { m_useSortKeyOverride = false; }
 
-    /** @brief Get the currently active sprite asset pointer. */
+    /** ## Gets the currently active sprite asset pointer. */
     const Sprite* getSprite()   const { return m_sprite;   }
 
-    /** @brief Check whether this renderer is currently visible. */
+    /** ## Checks whether this renderer is currently visible. */
     bool          isVisible()   const { return m_visible;  }
 
-    /** @brief Get current rotation. */
+    /** ## Gets current rotation. */
     Rotation      getRotation() const { return m_rotation; }
 
-    /** @brief Get render layer as raw byte value. */
+    /** ## Gets render layer as raw byte value. */
     uint8_t       getLayer()    const { return m_layer;    }
 
 private:

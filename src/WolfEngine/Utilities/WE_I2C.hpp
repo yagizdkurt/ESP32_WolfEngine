@@ -1,62 +1,80 @@
 #pragma once
-#include <driver/i2c.h>
+#include <driver/i2c_master.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "freertos/task.h"
 #include "WolfEngine/Settings/WE_Settings.hpp"
 
 // ─────────────────────────────────────────────────────────────
-//  I2CManager — static I2C bus manager
+//  I2CManager — static, thread-safe I2C bus manager
 //
-//  Provides low-level read/write primitives for any I2C device.
-//  Available to engine drivers and user code alike.
+//  Provides device registration and low-level read/write
+//  primitives for any I2C device. All public operations are
+//  serialized via a FreeRTOS mutex; safe to call from multiple
+//  tasks simultaneously.
 //
 //  Notes:
 //  - Call only after WolfEngine has been initialized.
-//  - Do not call from multiple tasks simultaneously.
-//  - To add a custom driver, use these primitives directly.
+//  - Each device must call addDevice() once (typically in begin())
+//    to obtain a handle used for all subsequent transactions.
 // ─────────────────────────────────────────────────────────────
 
 class I2CManager {
 public:
-    static constexpr i2c_port_t PORT    = I2C_NUM_0;
-    static constexpr gpio_num_t PIN_SDA = gpio_num_t(Settings.hardware.i2c.sda);
-    static constexpr gpio_num_t PIN_SCL = gpio_num_t(Settings.hardware.i2c.scl);
-    static constexpr uint32_t   FREQ_HZ = 400000;
+    static constexpr gpio_num_t PIN_SDA    = gpio_num_t(Settings.hardware.i2c.sda);
+    static constexpr gpio_num_t PIN_SCL    = gpio_num_t(Settings.hardware.i2c.scl);
+    static constexpr uint32_t   FREQ_HZ    = 400000;
 
-    // Maximum time any single bus transaction is allowed to take
-    // before it is considered failed. 10 ms is generous enough to
-    // handle clock-stretching devices while still catching hung buses.
-    static constexpr uint32_t   TIMEOUT = pdMS_TO_TICKS(10);
+    // Timeout for any single bus transaction in milliseconds.
+    // 10 ms is generous enough for clock-stretching devices while still catching hung buses.
+    static constexpr int        TIMEOUT_MS = 10;
 
-    // Sends `len` bytes from `data` to the device at 7-bit address `addr`.
-    // Generates: START → address+W → data bytes → STOP.
-    // Returns ESP_OK on ACK from device, ESP_FAIL or ESP_ERR_TIMEOUT otherwise.
-    static esp_err_t write(uint8_t addr, const uint8_t* data, size_t len);
+    // Timeout waiting to acquire the bus mutex. Must be greater than TIMEOUT_MS
+    // so a task already holding the lock can always complete its transaction first.
+    static constexpr int        MUTEX_TIMEOUT_MS = 100;
 
-    // Reads `len` bytes from the device at 7-bit address `addr` into `data`.
-    // Generates: START → address+R → data bytes (ACK each) → NACK → STOP.
-    // The device must already have its internal pointer set (e.g. via a prior write).
-    static esp_err_t read(uint8_t addr, uint8_t* data, size_t len);
+    // Maximum attempts per transaction before returning the final error.
+    static constexpr int        MAX_RETRIES     = 3;
+    // Base delay between retry attempts in ms; doubles each attempt (exponential backoff).
+    static constexpr int        BACKOFF_BASE_MS = 1;
 
-    // Writes `len` bytes to a specific 8-bit register address on the device.
+    // Register a device at the given 7-bit address at FREQ_HZ speed.
+    // Call once per device in its begin() before any transactions.
+    // Returns a handle used for all subsequent transactions with that device.
+    static i2c_master_dev_handle_t addDevice(uint8_t addr);
+
+    // Sends len bytes from data to the device.
+    static esp_err_t write(i2c_master_dev_handle_t dev, const uint8_t* data, size_t len);
+
+    // Reads len bytes from the device into data.
+    static esp_err_t read(i2c_master_dev_handle_t dev, uint8_t* data, size_t len);
+
+    // Writes a register byte then len data bytes in a single transaction.
     // Generates: START → address+W → reg → data bytes → STOP.
-    // Suitable for devices that use a single-byte register/command prefix.
-    static esp_err_t writeReg(uint8_t addr, uint8_t reg, const uint8_t* data, size_t len);
+    static esp_err_t writeReg(i2c_master_dev_handle_t dev, uint8_t reg, const uint8_t* data, size_t len);
 
-    // Reads `len` bytes from a specific 8-bit register address on the device.
+    // Writes reg byte then reads len bytes with a repeated START.
     // Generates: START → address+W → reg → REPEATED START → address+R → data → STOP.
-    // The repeated start (vs stop+start) keeps bus ownership during the turnaround,
-    // which is required by some devices to guarantee atomic register reads.
-    static esp_err_t readReg(uint8_t addr, uint8_t reg, uint8_t* data, size_t len);
+    static esp_err_t readReg(i2c_master_dev_handle_t dev, uint8_t reg, uint8_t* data, size_t len);
+
+    // Writes tx_len bytes then reads rx_len bytes with a repeated START between.
+    // Used for devices with multi-byte register addresses (e.g. EEPROM with 16-bit address).
+    static esp_err_t transmitReceive(i2c_master_dev_handle_t dev,
+                                     const uint8_t* tx, size_t tx_len,
+                                     uint8_t* rx, size_t rx_len);
+
+    // Returns ESP_OK if the device at addr ACKs. Does not require a device handle.
+    static esp_err_t probe(uint8_t addr);
 
     // Scans all 127 valid 7-bit addresses and logs any device that ACKs.
-    // Useful during hardware bring-up to verify wiring and address configuration.
     // Should not be called in production/release builds.
     static void scan();
 
-    // Logs bus state to serial: SDA/SCL pin levels, driver install state.
+    // Logs bus state: SDA/SCL pin levels, bus handle state.
     // Call after begin() to confirm the bus is healthy before using devices.
     static void diagBusState();
 
-// Set to 1 to log every I2C transaction (addr, direction, length, result).
+// Set to 1 to log every I2C transaction (direction, length, result).
 // Significant serial output — enable only when diagnosing bus issues.
 #ifndef WE_I2C_DEBUG_VERBOSE
     #define WE_I2C_DEBUG_VERBOSE 1
@@ -66,6 +84,8 @@ private:
     friend class WolfEngine;
     static esp_err_t begin();
     static void end();
+    static bool isRetryable(esp_err_t err);
+    static i2c_master_bus_handle_t s_busHandle;
+    static SemaphoreHandle_t       s_busMutex;
     I2CManager() = delete;
-
 };

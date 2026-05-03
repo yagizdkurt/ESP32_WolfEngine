@@ -23,7 +23,7 @@ void UIManager::clearElements() {
 
 void UIManager::initialize(uint16_t* framebuffer) {
     m_framebuffer = framebuffer;
-    if (m_count > 0) { m_dirty = true; }
+    clearElements();
 }
 
 void UIManager::render() {
